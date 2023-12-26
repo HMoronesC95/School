@@ -1,0 +1,36 @@
+#include <18F4550.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#fuses NOPROTECT, NOWDT,  NOFCMEN, PLL1, CPUDIV1, USBDIV,XT
+#use delay(clock = 4M)
+#use RS232(BAUD=9600,BITS=8,PARITY=N,XMIT=PIN_C6,RCV=PIN_C7)
+
+      
+void main(){
+
+   while(true)
+   { 
+ 
+   if (input(PIN_D0))
+   {
+    output_high(PIN_D1);
+         
+     printf("AT\r\n");
+     delay_ms(100);
+     
+     printf("AT+CMGF=1\r\n");
+     delay_ms(100);
+     
+     printf("AT+CMGS=\"+524441320959\"\r\n");
+     delay_ms(100);
+     
+     
+     printf("--C2-%s-%s-%s",latitud,longitud,velocidad);
+     putchar(0x1A);
+   
+   } output_low(PIN_D1); 
+     
+   }//fin del ciclo infinito
+}//fin del main

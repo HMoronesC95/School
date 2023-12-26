@@ -1,0 +1,152 @@
+#include  <18f4550.h>
+#FUSES    NOWDT,NOBROWNOUT,INTRC       
+#use      delay(clock=8M)  
+#use      I2C(master, sda=PIN_b0, scl=PIN_b1, slow)  //You can change, according your board ports
+#use      rs232(baud=9600,xmit=PIN_C6,rcv=PIN_C7)    //You can change, according your board ports
+#include  "MPU6050.C"
+#include  <math.h>
+#define LCD_ENABLE_PIN  PIN_D0                                
+#define LCD_RS_PIN      PIN_D1                                   
+#define LCD_RW_PIN      PIN_D2                                  
+#define LCD_DATA4       PIN_D4                                   
+#define LCD_DATA5       PIN_D5                                  
+#define LCD_DATA6       PIN_D6                                    
+#define LCD_DATA7       PIN_D7
+#include  <lcd.c>
+
+signed int8 A_data[6];
+signed int8 G_data[2];
+signed int16 ax=0,ay=0,az=0;
+signed int16 gx=0;
+float ang_x=0,ana_x=0,ana_y=0,ana_z=0,a_x=0;
+float valor_timer=0,theta_d=0,dtheta_d=0,kp1=5.9,kd1=0.1,kp2=20.15,kd2=0.35;
+int duty_i=0,duty_d=0;
+
+//Valor de los offsets
+signed int32 ax_o=0,ay_o=0,az_o=0;
+signed int32 gx_o=0;
+
+#int_TIMER0
+void TIMER0_A()
+{
+   gx=make16(G_data[0],G_data[1])-gx_o;      
+ 
+   ang_x=0.01*((250.+500.*gx)/65535.);
+
+   G_data[0]=mpu6050_read(0x43); //Read X axis(LSB)
+   G_data[1]=mpu6050_read(0x44); //Read X axis(MSB)
+  
+   set_timer0(55536);
+   valor_timer=(4./8000000.)*(1.)*(65536-get_timer0());
+}
+
+
+void main()
+{
+lcd_init();
+mpu6050_init();    
+   
+printf(lcd_putc,"\f");
+printf(lcd_putc," MPU6050 Gyro   \n");
+printf(lcd_putc," Accelerometer  ");
+delay_ms(1000);
+printf(lcd_putc,"\f");
+
+for(int32 i=0;i<3000;i++)
+{  
+   G_data[0]=mpu6050_read(0x43); //Read X axis(LSB)
+   G_data[1]=mpu6050_read(0x44); //Read X axis(MSB)
+   A_data[0]=mpu6050_read(0x3B); //Read X axis(LSB)
+   A_data[1]=mpu6050_read(0x3C); //Read X axis(MSB)
+   A_data[2]=mpu6050_read(0x3D); //Read Y axis(LSB)
+   A_data[3]=mpu6050_read(0x3E); //Read Y axis(MSB)
+   A_data[4]=mpu6050_read(0x3F); //Read Z axis(LSB)
+   A_data[5]=mpu6050_read(0x40); //Read Z axis(MSB)
+   gx=make16(G_data[0],G_data[1]);
+   ax=make16(A_data[0],A_data[1]);
+   ay=make16(A_data[2],A_data[3]);
+   az=make16(A_data[4],A_data[5]);
+   gx_o+=gx;
+   ax_o+=ax;
+   ay_o+=ay;
+   az_o+=az;   
+   if(i%100==0)
+      output_toggle(pin_a0);
+}
+   output_low(pin_a0);
+   gx_o=gx_o/3000;
+   ax_o=ax_o/3000;
+   ay_o=ay_o/3000;
+   az_o=16384-az_o/3000;
+
+   setup_ccp1(ccp_pwm);
+   setup_ccp2(ccp_pwm);
+   setup_timer_2(T2_DIV_BY_1,255,1);   
+
+   setup_timer_0(RTCC_INTERNAL|RTCC_DIV_1);
+   enable_interrupts(INT_TIMER0);
+   enable_interrupts(GLOBAL); 
+   set_timer0(55536);
+
+   while(TRUE)
+   {
+   A_data[0]=mpu6050_read(0x3B); //Read X axis(LSB)
+   A_data[1]=mpu6050_read(0x3C); //Read X axis(MSB)
+   A_data[2]=mpu6050_read(0x3D); //Read Y axis(LSB)
+   A_data[3]=mpu6050_read(0x3E); //Read Y axis(MSB)
+   A_data[4]=mpu6050_read(0x3F); //Read Z axis(LSB)
+   A_data[5]=mpu6050_read(0x40); //Read Z axis(MSB)
+
+   ax=make16(A_data[0],A_data[1])-ax_o;      
+   ay=make16(A_data[2],A_data[3])-ay_o;     
+   az=make16(A_data[4],A_data[5])+az_o;
+   
+   ana_x=(4.*9.81*ax)/65535.;
+   ana_y=(4.*9.81*ay)/65535.;
+   ana_z=(4.*9.81*az)/65535.;
+
+   ana_x=atan2(ana_y,sqrt(ana_x*ana_x+ana_z*ana_z))*(180.0/3.1416);
+
+   a_x=0.05*(a_x+ang_x)+0.95*(ana_x);
+   
+   //A1 son del motor derecho (cinta) 
+   //A2 son del motor derecho 
+   //A3 son del motor izquierdo (cinta) 
+   //A4 son del motor izquierdo 
+ 
+   if(a_x<0)
+   {
+      output_low(pin_A2);
+      output_low(pin_A4);
+      output_high(pin_A1);  // anti clockwise
+      output_high(pin_A3);  //clockwise
+   }else if(a_x>0)
+   {
+      output_low(pin_A1);
+      output_low(pin_A3);
+      output_high(pin_A2);  //clockwise
+      output_high(pin_A4);  //anti clockwise
+   }
+ 
+   duty_i=abs((255./80)*(0.131625)*(kp1*(a_x-theta_d)+kd1*(a_x/0.01-dtheta_d)));
+   duty_d=abs((255./80)*(0.039)*(kp2*(a_x-theta_d)+kd2*(a_x/0.01-dtheta_d)));
+   
+   
+   
+   
+/* 
+   if(duty_i<0)
+      duty_i=duty_i*(-1);
+   else if(duty_d<0)
+      duty_i=duty_i*(-1);  
+*/
+   
+   set_pwm1_duty(duty_i);
+   set_pwm2_duty(duty_d);
+
+   printf(lcd_putc,"\fangulo:%f\n",a_x);
+   printf(lcd_putc,"%i   %i ",duty_i,duty_d);      
+
+   delay_ms(100);
+   }
+}

@@ -1,0 +1,117 @@
+#include <18F4550.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#fuses NOPROTECT, NOWDT,  NOFCMEN, PLL1, CPUDIV1, USBDIV,XT
+#use delay(clock = 4M)
+#use RS232(BAUD=9600,BITS=8,PARITY=N,XMIT=PIN_C6,RCV=PIN_C7)
+
+
+char latitud[11]={"2035.49253"},longitud[11]={"10024.7242"},velocidad[4]={"0.000"};
+unsigned char data;
+int i;
+
+#int_RDA 
+void RDA_isr() 
+{   
+   i=0;
+   data=getc();   
+   if(data=='$')
+   {
+   data=getc();   
+   if(data=='G')
+   {
+   data=getc();
+   if(data=='N');
+   {
+   data=getc();
+   if(data=='R');
+   {
+   data=getc();
+   if(data=='M')
+   {
+   data=getc();
+   if(data=='C')
+   {
+   data=getc();
+   if(data==',')
+   {
+   
+   while(data!='A')
+   {data=getc();}
+   
+   while(data!=',')
+   {data=getc();} }
+       
+         for(i=0;i<10;i++)
+         {
+         latitud[i]=getc(); 
+         }
+         latitud[i]='\0';
+       
+   while(data!='N')
+   {data=getc();}
+   
+   while(data!=',')
+   {data=getc();}
+   
+         for(i=0;i<10;i++)
+         { 
+         longitud[i]=getc();              
+         }
+         longitud[i]='\0';
+         
+   while(data!='W')
+   {data=getc();}
+   
+   while(data!=',')
+   {data=getc();}
+   
+         
+         for(i=0;i<4;i++)
+         { 
+         velocidad[i]=getc();              
+         }
+         velocidad[i]='\0';
+         
+   output_toggle(PIN_D0);
+                 
+   }}}}}}
+   
+   
+}//fin de la interrupcion
+      
+void main(){
+
+ enable_interrupts(INT_RDA);
+ enable_interrupts(GLOBAL);
+ 
+   while(true)
+   { 
+ 
+   
+   {
+
+    output_high(PIN_D1);
+         
+     printf("AT\r\n");
+     delay_ms(100);
+     
+     printf("AT+CMGF=1\r\n");
+     delay_ms(100);
+     
+     printf("AT+CMGS=\"+524426319193\"\r\n");
+     delay_ms(100);
+     
+     
+     printf("--C1-%s-%s-%s",latitud,longitud,velocidad);
+     putchar(0x1A);
+   
+     output_low(PIN_D1);
+     delay_ms(8000);
+
+   }  
+     
+   }//fin del ciclo infinito
+}//fin del main

@@ -1,0 +1,77 @@
+#include <18F4550.h>
+#fuses HS,NOPROTECT,NOWDT
+#use delay(internal)
+#use fast_io(D)
+//#use standard_io(B)
+//#use fixed_io(D_OUTPUTS=PIN_D0,PIN_D1)
+       //rows columns  1          2           3         4          5           6        7           8           9        enter      0         clear
+int teclado[4][3]={0b00000110,0b01011011,0b01001111,0b01100110,0b01101101,0b01111101,0b00000111,0b01111111,0b01101111,0b10101010,0b00111111,0b01010101};
+int renglon[4]={pin_b3,pin_b2,pin_b1,pin_b0},columna[3]={pin_b4,pin_b5,pin_b6};
+int display_izquierda[1]={0b00111111},display_derecha[1]={0b00111111},d_i[1]={0b00111111},d_d[1]={0b00111111};
+void multiplex();
+void enter();
+void clear();
+
+void main()
+{   
+
+  set_tris_D(0b00000000);
+  
+   while(true)
+   {             
+      for (int i=0;i<4;i++)
+      {
+         output_high(renglon[i]);
+         
+            for(int j=0;j<3;j++)
+            {            
+               if(input(columna[j]))
+               {  
+                  if (teclado[i][j]==0b10101010)
+                     enter();
+                  else if (teclado[i][j]==0b01010101)
+                     clear();
+                  else 
+                  {
+                     d_i[0]=d_d[0];
+                     d_d[0]=teclado[i][j];
+                  }
+                  while(input(columna[j]))
+                  multiplex();
+               }    
+            }
+            
+         output_low(renglon[i]);
+      }    
+    multiplex();
+      
+    }//fin del ciclo infinito  
+}//fin del main
+
+void enter()
+{
+   display_derecha[0]=d_d[0];
+   display_izquierda[0]=d_i[0];
+   d_d[0]=0b00111111;
+   d_i[0]=0b00111111;
+}//fin del enter
+
+void clear()
+{
+   d_d[0]=0b00111111;
+   d_i[0]=0b00111111;
+   display_derecha[0]=0b00111111;
+   display_izquierda[0]=0b00111111;
+}//fin del clear
+
+void multiplex()
+{
+   output_high(pin_c1);    //display de la izquierda
+   output_d(display_izquierda[0]);      
+   delay_ms(5);      
+   output_low(pin_c1);
+   output_high(pin_c0);    //display de la derecha
+   output_d(display_derecha[0]);        
+   delay_ms(5);
+   output_low(pin_c0);
+}//fin del multiplex

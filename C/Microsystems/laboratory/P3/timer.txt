@@ -1,0 +1,21 @@
+#include <18f4550.h>
+#fuses NOWDT,NOPROTECT,INTRC
+#use delay(clock=8M)
+
+#int_TIMER0 //declaracion de interrupcion
+void TIMER0_isr(void)
+{
+   output_toggle(pin_B0);
+   set_timer0(65489);
+}
+void main()
+{
+   setup_timer_0(RTCC_INTERNAL|RTCC_DIV_1);
+   set_timer0(65489); 
+   enable_interrupts(INT_timer0);
+   enable_interrupts(GLOBAL);
+   while(1);
+   {
+      ;
+   }//fin del ciclo infinito
+}//fin del main

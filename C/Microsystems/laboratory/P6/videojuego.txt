@@ -1,0 +1,326 @@
+#include <18F4550.h>
+#fuses NOWDT,NOPROTECT,INTRC
+#use delay(clock=8M)
+#include <st7920.h>
+#include <graphics.c>
+#include <stdlib.h>
+#use RS232(BAUD=38400,BITS=8,PARITY=N,XMIT=PIN_C6,RCV=PIN_C7)
+
+
+unsigned int new_position_x=1;
+unsigned int new_position_y=30;
+unsigned int snake_x[256]={0};
+unsigned int snake_y[256]={0};
+unsigned int comida_x=1;
+unsigned int comida_y=1;
+unsigned int comida_especial_x=0;
+unsigned int comida_especial_y=0;
+unsigned int1 comida_tipo=0;
+unsigned int mojon_x[60]={0};
+unsigned int mojon_y[60]={0};
+int1 flag_comida=0,end_game=0;
+int8 direccion=0,i=0,j=0,comida_timer=0,puntaje=0,puntaje_anterior=0,tamanio=0;
+int16 cuenta_mojon=10;
+unsigned char game[]="GAME";
+unsigned char over[]="OVER";
+unsigned char score[]="SCORE:";
+unsigned char p_5[]="5 pts:";
+unsigned char p_1[]="1 pts:";
+unsigned char avoid[]="avoid:";
+unsigned char puntaje_string[]="000";
+unsigned char comida_tiempo[]="FOOD: 00";
+unsigned char best[10]="BEST: 000";
+unsigned char data;
+
+#int_RDA 
+void RDA_isr() 
+{         
+      data=getc();     
+   if(data=='a')
+   {
+      if(direccion!=3)
+         direccion=0;
+   }
+   else if(data=='b')
+   {
+      if(direccion!=2)
+         direccion=1;
+   }
+   else if(data=='c')
+   {
+      if(direccion!=1)
+         direccion=2;
+   }
+   else if(data=='d')
+   {
+      if(direccion!=0)
+         direccion=3;
+   }
+}//fin de la interrupcion serial
+
+#int_TIMER0
+void TIMER0_A()
+{
+   set_timer0(57724);
+      
+      if(comida_timer<=0)
+      {  
+         if(comida_tipo==1)
+         {
+         glcd_pixel(comida_x,comida_y,OFF);
+         flag_comida=0;
+         comida_timer=10;
+         }
+         else if(comida_tipo==0)
+         {
+         glcd_rect(comida_x,comida_y,comida_x+1,comida_y+1,YES,OFF);
+         flag_comida=0;
+         comida_timer=10; 
+         }           
+      }
+      
+      if(end_game==0)
+      {
+         glcd_text57(70, 29, comida_tiempo, 1, OFF);
+         sprintf(comida_tiempo,"FOOD: %i",comida_timer);
+         glcd_text57(70, 29, comida_tiempo, 1, YES);
+         comida_timer--;
+      }
+}
+void game_over()
+{  
+   direccion=5;
+   end_game=1;
+   glcd_rect(1, 1, 62, 62, YES, OFF);
+   glcd_text57(5, 5, game, 2, YES);
+   glcd_text57(12, 20, over, 2, YES);
+   if(puntaje>=puntaje_anterior)
+   {  
+      sprintf(best,"%i",puntaje);
+      puntaje_anterior=puntaje;
+      if(puntaje<10)
+      {
+         write_eeprom(0,best[0]);
+      }
+      else if(puntaje>=10 && puntaje<255)
+      {
+         write_eeprom(0,best[0]);
+         write_eeprom(1,best[1]);
+         write_eeprom(2,best[2]);
+      }
+   }
+}//fin de game over
+void movimiento()
+{
+         glcd_pixel(snake_x[0],snake_y[0],OFF);
+         
+         glcd_pixel(new_position_x,new_position_y,ON); 
+         
+         snake_x[tamanio]=new_position_x;
+         snake_y[tamanio]=new_position_y;
+     
+         if(puntaje>=cuenta_mojon)
+         {  
+            mojon_x[j]=snake_x[0];
+            mojon_y[j]=snake_y[0];
+            glcd_pixel(snake_x[0],snake_y[0],ON);
+            glcd_pixel(snake_x[0],snake_y[0]+1,ON);
+            cuenta_mojon+=10;
+            j++;
+         }
+         
+         for(int k=0;k<j;k++)
+            {
+               glcd_pixel(mojon_x[k],mojon_y[k],ON);
+               glcd_pixel(mojon_x[k],mojon_y[k]+1,ON);
+            }
+         
+}//fin movimiento
+void choque()
+{
+         for(i=0;i<tamanio;i++)
+            {
+               snake_x[i]=snake_x[i+1];
+               snake_y[i]=snake_y[i+1];
+               if((new_position_x==snake_x[i] && new_position_y==snake_y[i]))
+                  game_over();
+               for(int k=0;k<j;k++)
+               {
+                  if((mojon_x[k]==snake_x[tamanio] && mojon_y[k]==snake_y[tamanio]) || (mojon_x[k]==snake_x[tamanio] && mojon_y[k]+1==snake_y[tamanio]))
+                  direccion=5;
+               }                  
+            }
+}
+void comida()
+{  
+   comida_especial_x=rand()%6+1;
+   comida_especial_y=rand()%6+1;
+   
+   if(comida_especial_x==comida_especial_y)
+      comida_tipo=1;
+   else comida_tipo=0;
+   
+         comida_x=rand()%61+1;
+         comida_y=rand()%61+1;
+   
+   if(comida_tipo==1)
+    glcd_pixel(comida_x,comida_y,ON);  
+   else 
+      glcd_rect(comida_x,comida_y,comida_x+1,comida_y+1,YES,ON);
+   
+   flag_comida=1;
+
+}//fin comida
+
+void main() 
+{     
+   setup_timer_0(RTCC_INTERNAL|RTCC_DIV_256);
+   enable_interrupts(INT_timer0);
+   enable_interrupts(INT_RDA);
+   enable_interrupts(GLOBAL); 
+   set_timer0(57724);
+
+   glcd_init_graph();
+   glcd_fillScreen(0);
+   
+         for(tamanio=0;tamanio<3;tamanio++)
+         {
+            glcd_pixel(new_position_x,new_position_y,ON);
+            snake_x[tamanio]=new_position_x;
+            snake_y[tamanio]=new_position_y;
+            new_position_x++;
+         }
+         
+   glcd_rect(0, 0, 63, 63, NO, ON);
+   
+   glcd_text57(70, 1, p_5, 1, YES);
+   glcd_text57(70, 10, p_1, 1, YES);
+   glcd_text57(70, 19, avoid, 1, YES);
+   glcd_pixel(107,4,ON);
+   glcd_rect(107,13,108,14,YES,ON);
+   glcd_pixel(107,21,ON);
+   glcd_pixel(107,22,ON);   
+   glcd_text57(70, 39, score, 1, YES);
+   glcd_text57(107, 39, puntaje_string, 1, YES);
+   
+   best[0]=read_eeprom(0);
+   best[1]=read_eeprom(1);
+   best[2]=read_eeprom(2);   
+   puntaje_anterior=atoi(best);
+   sprintf(best,"BEST: %i",puntaje_anterior);
+   glcd_text57(70, 48, best, 1, YES);
+   glcd_update();
+   while(true)
+   {     
+         if(input(pin_d1)) //derecha
+           { 
+               if(direccion!=3)
+                  direccion=0;
+           }
+         else if(input(pin_e2)) //arriba
+            {
+               if(direccion!=2)
+                  direccion=1;
+            }
+         else if(input(pin_e1)) //abajo
+            {
+               if(direccion!=1)
+                  direccion=2;
+            }
+         else if(input(pin_a2))  //izquierda
+            {
+               if(direccion!=0)
+                  direccion=3;
+            }
+         
+         if(direccion==0)
+            {
+               movimiento();
+               new_position_x++;
+               choque();
+               glcd_update();
+            }
+         else if(direccion==1)
+            {
+               movimiento();
+               new_position_y--;
+               choque();
+               glcd_update();
+            }
+         else if(direccion==2)
+            {
+               movimiento();
+               new_position_y++;
+               choque();
+               glcd_update(); 
+            }
+         else if(direccion==3)
+            {
+               movimiento();
+               new_position_x--;
+               choque();
+               glcd_update(); 
+            }  
+          
+         if(comida_tipo==1)
+         {
+         if(snake_x[tamanio]==comida_x && snake_y[tamanio]==comida_y)  
+            {  
+               glcd_text57(107, 39, puntaje_string, 1, OFF);
+               flag_comida=0;
+               comida_timer=10;
+               tamanio+=3;
+               puntaje+=5;
+               sprintf(puntaje_string,"%i",puntaje);
+               glcd_text57(107, 39, puntaje_string, 1, YES);
+
+            }  
+         }else if(comida_tipo==0)
+         {   
+            if((snake_x[tamanio]==comida_x && snake_y[tamanio]==comida_y) || (snake_x[tamanio]==comida_x+1 && snake_y[tamanio]==comida_y) || (snake_x[tamanio]==comida_x && snake_y[tamanio]==comida_y+1) || (snake_x[tamanio]==comida_x+1 && snake_y[tamanio]==comida_y+1))
+            {  
+               if(snake_x[tamanio]==comida_x && snake_y[tamanio]==comida_y)
+               {  
+                  glcd_pixel(comida_x+1,comida_y,OFF);
+                  glcd_pixel(comida_x+1,comida_y+1,OFF);
+                  glcd_pixel(comida_x,comida_y+1,OFF);
+               }
+               else if(snake_x[tamanio]==comida_x+1 && snake_y[tamanio]==comida_y)
+               {  
+                  glcd_pixel(comida_x,comida_y+1,OFF);
+                  glcd_pixel(comida_x+1,comida_y+1,OFF);
+                  glcd_pixel(comida_x,comida_y,OFF);
+               }
+               else if(snake_x[tamanio]==comida_x && snake_y[tamanio]==comida_y+1)
+               {  
+                  glcd_pixel(comida_x,comida_y,OFF);
+                  glcd_pixel(comida_x+1,comida_y+1,OFF);
+                  glcd_pixel(comida_x+1,comida_y,OFF);
+               }
+               else if(snake_x[tamanio]==comida_x+1 && snake_y[tamanio]==comida_y+1)
+               {  
+                  glcd_pixel(comida_x,comida_y,OFF);
+                  glcd_pixel(comida_x+1,comida_y,OFF);
+                  glcd_pixel(comida_x,comida_y+1,OFF);
+               }
+               
+               glcd_text57(107, 39, puntaje_string, 1, OFF);
+               flag_comida=0;
+               comida_timer=10;
+               tamanio+=3;
+               puntaje+=1;
+               sprintf(puntaje_string,"%i",puntaje);
+               glcd_text57(107, 39, puntaje_string, 1, YES);
+            }
+         }
+         if(flag_comida==0)
+            comida();
+            
+         if(new_position_x==0 || new_position_x==63 || new_position_y==0 || new_position_y==63 || end_game==1 || direccion==5)
+         {    
+            game_over();    
+            glcd_update();
+         }
+         glcd_pixel(0,0,ON);        
+   }//fin del ciclo infinito
+}//fin del main

@@ -1,0 +1,152 @@
+#include <18F4550.h>
+#fuses HS,NOPROTECT,NOWDT
+
+#use delay(internal)
+
+#use fast_io(D)
+//#use standard_io(B)
+//#use fixed_io(D_OUTPUTS=PIN_D0,PIN_D1)
+       //rows columns  1          2           3         4          5           6        7           8           9                    0
+int teclado[4][3]={0b00000110,0b01011011,0b01001111,0b01100110,0b01101101,0b01111101,0b00000111,0b01111111,0b01101111,0b10101010,0b00111111,0b01010101};
+int renglon[4]={pin_b3,pin_b2,pin_b1,pin_b0},columna[3]={pin_b4,pin_b5,pin_b6};
+int display_izquierda[1]={0b00111111},display_derecha[1]={0b00111111},di[1]={0b00111111},dd[1]={0b00111111};
+int i=0,j=0;
+void multiplex();
+void enter();
+void clear();
+
+void main()
+{   
+
+  set_tris_D(0b00000000);
+ 
+      
+   while(true)
+   {      
+         
+      output_high(pin_b3);
+      if(input(pin_b4))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[0][0];
+      while(input(pin_b4))
+      multiplex();
+      }
+      else if(input(pin_b5))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[0][1];
+      while(input(pin_b5))
+      multiplex();
+      }
+      else if(input(pin_b6))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[0][2];
+      while(input(pin_b6))
+      multiplex();
+      }
+      output_low(pin_b3);
+      
+      output_high(pin_b2);
+      if(input(pin_b4))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[1][0];
+      while(input(pin_b4))
+      multiplex();
+      }
+      else if(input(pin_b5))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[1][1];
+      while(input(pin_b5))
+      multiplex();
+      }
+      else if(input(pin_b6))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[1][2];
+      while(input(pin_b6))
+      multiplex();
+      }
+      output_low(pin_b2);
+      
+      output_high(pin_b1);
+      if(input(pin_b4))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[2][0];
+      while(input(pin_b4))
+      multiplex();
+      }
+      else if(input(pin_b5))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[2][1];
+      while(input(pin_b5))
+      multiplex();
+      }
+      else if(input(pin_b6))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[2][2];
+      while(input(pin_b6))
+      multiplex();
+      }
+      output_low(pin_b1);
+      
+      output_high(pin_b0);
+      if(input(pin_b4))
+      {
+      enter();
+      while(input(pin_b4))
+      multiplex();
+      }
+      else if(input(pin_b5))
+      {
+      display_derecha[0]=display_izquierda[0];
+      display_izquierda[0]=teclado[3][1];
+      while(input(pin_b5))
+      multiplex();
+      }
+      else if(input(pin_b6))
+      {
+      clear();
+      while(input(pin_b6))
+      multiplex();
+      }
+      output_low(pin_b0);
+      
+    multiplex();
+      
+    }//fin del ciclo infinito  
+}//fin del main
+
+void enter()
+{
+   dd[0]=display_derecha[0];
+   di[0]=display_izquierda[0];
+   display_derecha[0]=0b00111111;
+   display_izquierda[0]=0b00111111;
+}//fin del enter
+
+void clear()
+{
+   dd[0]=0b00111111;
+   di[0]=0b00111111;
+   display_derecha[0]=0b00111111;
+   display_izquierda[0]=0b00111111;
+}//fin del clear
+
+void multiplex()
+{
+   output_high(pin_c1);    //display de la izquierda
+   output_d(dd[0]);      
+   delay_ms(10);      
+   output_low(pin_c1);
+   output_high(pin_c0);    //display de la derecha
+   output_d(di[0]);        
+   delay_ms(10);
+   output_low(pin_c0);
+}//fin del multiplex

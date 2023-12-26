@@ -1,0 +1,50 @@
+#include <18F4550.h>
+#fuses HS,NOPROTECT,NOWDT
+
+#use delay(clock=2M, internal)
+
+#use fast_io(D)
+//#use standard_io(B)
+//#use fixed_io(D_OUTPUTS=PIN_D0,PIN_D1)
+int num[10]={0b00111111,0b00000110,0b01011011,0b01001111,0b01100110,0b01101101,0b01111101,0b00000111,0b01111111,0b01101111},unidad=0,decena=0,contador=0;
+void multiplex();
+void incremento();
+
+void main()
+{   
+
+  set_tris_D(0b00000000);
+       
+   while(true)
+   {       
+        if(input(pin_b0))
+        {
+            incremento();
+             while(input(pin_b0))
+                  multiplex();          
+        }       
+        multiplex();
+      
+    }//fin del ciclo infinito  
+}//fin del main
+
+void incremento()
+{
+   contador++;
+   if(contador>99)
+       contador=0;
+   decena=contador/10;
+   unidad=contador-decena*10;
+}//fin del incremento
+
+void multiplex()
+{
+   output_high(pin_c1);    //display de la derecha
+   output_d(num[decena]);      
+   delay_ms(10);      
+   output_low(pin_c1);
+   output_high(pin_c0);    //display de la izquierda
+   output_d(num[unidad]);        
+   delay_ms(10);
+   output_low(pin_c0);
+}//fin del multiplex

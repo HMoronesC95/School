@@ -1,0 +1,66 @@
+#include  <18f4550.h>
+#FUSES    NOWDT,INTRC, NOPROTECT       
+#use      delay(clock=8M)  
+
+#INT_TIMER3
+void a()
+{
+   set_timer3(64036);
+   set_tris_b(0b00000000);
+   output_b(0b11111111);
+   delay_us(10);
+   output_b(0b00000000);
+   set_tris_b(0b11111111);
+   delay_us(1500);
+   if (input(pin_b0))
+      output_high(pin_d0);
+   else 
+      output_low(pin_d0);
+  
+  if (input(pin_b1))
+      output_high(pin_d1);
+   else 
+      output_low(pin_d1);
+  
+  if (input(pin_b2))
+      output_high(pin_d2);
+   else 
+      output_low(pin_d2);
+  
+  if (input(pin_b3))
+      output_high(pin_d3);
+   else 
+      output_low(pin_d3);
+  
+  if (input(pin_b4))
+      output_high(pin_d4);
+   else 
+      output_low(pin_d4);
+  
+  if (input(pin_b5))
+      output_high(pin_d5);
+   else 
+      output_low(pin_d5);
+  
+  if (input(pin_b6))
+      output_high(pin_d6);
+   else 
+      output_low(pin_d6);
+  
+  if (input(pin_b7))
+      output_high(pin_d7);
+   else 
+      output_low(pin_d7);
+
+}
+
+void main()
+{
+   setup_timer_3(T3_INTERNAL|T3_DIV_BY_8);
+   enable_interrupts(INT_timer3);
+   enable_interrupts(GLOBAL); 
+   set_timer3(64036); 
+   While (true)
+   {
+   }
+}

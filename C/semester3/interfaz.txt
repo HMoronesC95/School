@@ -1,0 +1,1187 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using GMap.NET.MapProviders;
+using GMap.NET.ObjectModel;
+using GMap.NET.WindowsForms.Markers;
+using GMap.NET.WindowsForms;
+using GMap.NET;
+using System.IO.Ports;
+using System.Globalization;
+using System.Timers;
+using System.Collections;
+
+namespace WindowsFormsApp3
+{
+
+    public partial class Form2 : Form
+    {
+        //Declaraciones de listas.
+        //Para gráficar.
+        public List<PointLatLng> _RutaCorregidora;
+        public List<PointLatLng> _RutaObrera;
+        //Para distancia y tiempo.
+        public List<PointLatLng> CorregidoraPuntoPunto;
+        public List<PointLatLng> ObreraPuntoPunto;
+
+        public Form2()
+        {
+            InitializeComponent();
+            //Creación de una lista a partir de la declaración
+            _RutaCorregidora = new List<PointLatLng>();
+            _RutaObrera = new List<PointLatLng>();
+            CorregidoraPuntoPunto = new List<PointLatLng>();
+            ObreraPuntoPunto = new List<PointLatLng>();
+        }
+
+        private void Form2_Load(object sender, EventArgs e)
+        {
+            cargarrutas(0);
+            cargaparadasC();
+            cargaparadasO();
+            serialPort1.Open();
+            Eliminar(1);
+            gMapControl1.DragButton = MouseButtons.Left;
+            gMapControl1.MapProvider = GMap.NET.MapProviders.GMapProviders.GoogleMap;
+            gMapControl1.Position = new GMap.NET.PointLatLng(20.592529, -100.413392);
+            gMapControl1.MinZoom = 1;
+            gMapControl1.MaxZoom = 100;
+            gMapControl1.Zoom = 13;
+            timer1.Enabled = true;
+            timer1.Start();
+        }
+
+        //Velocidad Promedio Camiones
+        double VPC1, VPC2, ContadorV0C1, ContadorV0C2;
+        double velocidadPromedio(double velocidad, double identificador)
+        {
+            switch (identificador)
+            {
+                case 1:
+                    //velocidad menos a 4Km/hr
+                    if (velocidad < 200)
+                    {
+                        ContadorV0C1++;
+                        VPC1 = 0;
+                        VPC1 = (ContadorV0C1 == 5) ? 0 : VPC1;
+                    }
+                    else
+                    {
+                        ContadorV0C1 = 0;
+                        VPC1 = (VPC1 + velocidad) / 2;
+                        VPC1 = (VPC1 < 500) ? VPC1 : 500;
+                    }
+                        break;
+                case 2:
+                    if (velocidad < 200)
+                    {
+                        VPC2 = 0;
+                        ContadorV0C2++;
+                        VPC2 = (ContadorV0C2 == 5) ? 0 : VPC2;
+                    }
+                    else
+                    {
+                        ContadorV0C2 = 0;
+                        VPC2 = (VPC2 + velocidad) / 2;
+                        VPC2 = (VPC2 < 500||VPC2>500) ? 500: VPC2;
+                    }
+                    break;
+            }
+
+            return (0);
+        }
+
+        //OVERLAY DE PARADAS Corregidora.
+        GMapOverlay Parada1Corregidora = new GMapOverlay("ParadasCorregidora");
+        GMapOverlay Parada2Corregidora = new GMapOverlay("ParadasCorregidora2");
+        GMapOverlay Parada3Corregidora = new GMapOverlay("ParadasCorregidora3");
+        GMapOverlay Parada4Corregidora = new GMapOverlay("ParadasCorregidora4");
+        GMapOverlay Parada5Corregidora = new GMapOverlay("ParadasCorregidora5");
+        GMapOverlay Parada6Corregidora = new GMapOverlay("ParadasCorregidora6");
+        GMapOverlay Parada7Corregidora = new GMapOverlay("ParadasCorregidora7");
+        GMapOverlay Parada8Corregidora = new GMapOverlay("ParadasCorregidora8");
+        GMapOverlay Parada9Corregidora = new GMapOverlay("ParadasCorregidora9");
+        GMapMarker marcadorCP1, marcadorCP2, marcadorCP3, marcadorCP4, marcadorCP5, marcadorCP6, marcadorCP7, marcadorCP8, marcadorCP9;
+        double cargaparadasC()
+        {
+            double latitudObtenida, longitudObtenida;
+            latitudObtenida = CorregidoraPuntoPunto[0].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[0].Lng;
+            PointLatLng Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP1 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada1Corregidora.Markers.Add(marcadorCP1);
+
+            latitudObtenida = CorregidoraPuntoPunto[20].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[20].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP2 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada2Corregidora.Markers.Add(marcadorCP2);
+
+            latitudObtenida = CorregidoraPuntoPunto[29].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[29].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP3 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada3Corregidora.Markers.Add(marcadorCP3);
+
+            latitudObtenida = CorregidoraPuntoPunto[34].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[34].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP4 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada4Corregidora.Markers.Add(marcadorCP4);
+
+            latitudObtenida = CorregidoraPuntoPunto[45].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[45].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP5 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada5Corregidora.Markers.Add(marcadorCP5);
+
+            latitudObtenida = CorregidoraPuntoPunto[50].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[50].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP6 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada6Corregidora.Markers.Add(marcadorCP6);
+
+            latitudObtenida = CorregidoraPuntoPunto[138].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[138].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP7 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada7Corregidora.Markers.Add(marcadorCP7);
+
+            latitudObtenida = CorregidoraPuntoPunto[142].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[142].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP8 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada8Corregidora.Markers.Add(marcadorCP8);
+
+            latitudObtenida = CorregidoraPuntoPunto[143].Lat;
+            longitudObtenida = CorregidoraPuntoPunto[143].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorCP9 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.orange_small);
+            Parada9Corregidora.Markers.Add(marcadorCP9);
+
+            return (0);
+        }
+
+        //OVERLAY PARADAS OBRERA
+        GMapOverlay Parada1Obrera = new GMapOverlay("Parada Obrera");
+        GMapOverlay Parada2Obrera = new GMapOverlay("Parada Obrera 2");
+        GMapOverlay Parada3Obrera = new GMapOverlay("Parada Obrera 3");
+        GMapOverlay Parada4Obrera = new GMapOverlay("Parada Obrera 4");
+        GMapOverlay Parada5Obrera = new GMapOverlay("Parada Obrera 5");
+        GMapOverlay Parada6Obrera = new GMapOverlay("Parada Obrera 6");
+        GMapMarker marcadorOP1, marcadorOP2, marcadorOP3, marcadorOP4, marcadorOP5, marcadorOP6;
+        double cargaparadasO ()
+        {
+            double latitudObtenida, longitudObtenida;
+            latitudObtenida = ObreraPuntoPunto[0].Lat;
+            longitudObtenida = ObreraPuntoPunto[0].Lng;
+            PointLatLng Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorOP1 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.green_small);
+            Parada1Obrera.Markers.Add(marcadorOP1);
+
+            latitudObtenida = ObreraPuntoPunto[33].Lat;
+            longitudObtenida = ObreraPuntoPunto[33].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorOP2 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.green_small);
+            Parada2Obrera.Markers.Add(marcadorOP2);
+
+            latitudObtenida = ObreraPuntoPunto[59].Lat;
+            longitudObtenida = ObreraPuntoPunto[59].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorOP3 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.green_small);
+            Parada3Obrera.Markers.Add(marcadorOP3);
+
+            latitudObtenida = ObreraPuntoPunto[67].Lat;
+            longitudObtenida = ObreraPuntoPunto[67].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorOP4 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.green_small);
+            Parada4Obrera.Markers.Add(marcadorOP4);
+
+            latitudObtenida = ObreraPuntoPunto[87].Lat;
+            longitudObtenida = ObreraPuntoPunto[87].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorOP5 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.green_small);
+            Parada5Obrera.Markers.Add(marcadorOP5);
+
+            latitudObtenida = ObreraPuntoPunto[88].Lat;
+            longitudObtenida = ObreraPuntoPunto[88].Lng;
+            Coordenada = new PointLatLng(latitudObtenida, longitudObtenida);
+            marcadorOP6 = new GMarkerGoogle(Coordenada, GMarkerGoogleType.green_small);
+            Parada6Obrera.Markers.Add(marcadorOP6);
+
+            return (0);
+        }
+
+        double Seleccionderutasacargar(double aA,double identificadorruta)
+        {
+
+            if (identificadorruta==1)
+            {
+                int bA = Convert.ToInt16(aA);
+                for (int I = bA; I < 7; I++)
+                {
+                    cargadecoordenadas(I, identificadorruta);
+                }
+            }
+            if (identificadorruta == 2)
+            {
+                int bA = Convert.ToInt16(aA);
+                for (int I = bA; I < 10; I++)
+                {
+                    cargadecoordenadas(I, identificadorruta);
+                }
+            }
+            return (0);
+        }
+        double cargadecoordenadas(double IDparada,double identificadorderuta)
+        {
+            switch (identificadorderuta)
+            {
+                case 1:
+                    switch (IDparada)
+                    {
+                        case 1:
+                            gMapControl1.Overlays.Add(Parada1Obrera);
+                            break;
+                        case 2:
+                            gMapControl1.Overlays.Add(Parada2Obrera);
+                            break;
+                        case 3:
+                            gMapControl1.Overlays.Add(Parada3Obrera);
+                            break;
+                        case 4:
+                            gMapControl1.Overlays.Add(Parada4Obrera);
+                            break;
+                        case 5:
+                            gMapControl1.Overlays.Add(Parada5Obrera);
+                            break;
+                        case 6:
+                            gMapControl1.Overlays.Add(Parada6Obrera);
+                            break;
+                    }
+                    break;
+                case 2:
+                    switch(IDparada)
+                    {
+                        case 1:
+                            gMapControl1.Overlays.Add(Parada1Corregidora);
+                            break;
+                        case 2:
+                            gMapControl1.Overlays.Add(Parada2Corregidora);
+                            break;
+                        case 3:
+                            gMapControl1.Overlays.Add(Parada3Corregidora);
+                            break;
+                        case 4:
+                            gMapControl1.Overlays.Add(Parada4Corregidora);
+                            break;
+                        case 5:
+                            gMapControl1.Overlays.Add(Parada5Corregidora);
+                            break;
+                        case 6:
+                            gMapControl1.Overlays.Add(Parada6Corregidora);
+                            break;
+                        case 7:
+                            gMapControl1.Overlays.Add(Parada7Corregidora);
+                            break;
+                        case 8:
+                            gMapControl1.Overlays.Add(Parada8Corregidora);
+                            break;
+                        case 9:
+                            gMapControl1.Overlays.Add(Parada9Corregidora);
+                            break;
+                    }
+                    break;
+            }
+            return (0);
+        }
+            
+        double eliminarparadasC()
+        {
+            gMapControl1.Overlays.Remove(Parada1Corregidora);
+            gMapControl1.Overlays.Remove(Parada2Corregidora);
+            gMapControl1.Overlays.Remove(Parada3Corregidora);
+            gMapControl1.Overlays.Remove(Parada4Corregidora);
+            gMapControl1.Overlays.Remove(Parada5Corregidora);
+            gMapControl1.Overlays.Remove(Parada6Corregidora);
+            gMapControl1.Overlays.Remove(Parada7Corregidora);
+            gMapControl1.Overlays.Remove(Parada8Corregidora);
+            gMapControl1.Overlays.Remove(Parada9Corregidora);
+            return (0);
+        }
+        double eliminarparadasO()
+        {
+            gMapControl1.Overlays.Remove(Parada1Obrera);
+            gMapControl1.Overlays.Remove(Parada2Obrera);
+            gMapControl1.Overlays.Remove(Parada3Obrera);
+            gMapControl1.Overlays.Remove(Parada4Obrera);
+            gMapControl1.Overlays.Remove(Parada5Obrera);
+            gMapControl1.Overlays.Remove(Parada6Obrera);
+            return (0);
+        }
+
+        double calculodistanciasCorregidora (double restriccion,double latitud,double longitud)
+        {
+            int pos= Convert.ToUInt16(PosicionIteraC);
+            double distanciaD, latitudPP, longitudPP, longitudPPD, latitudPPD,DCPC;
+            distanciaD = 0;
+            distanciaD=comparacionesversiondouble(latitud, longitud, CorregidoraPuntoPunto[pos].Lat, CorregidoraPuntoPunto[pos].Lng);
+            for (int i = (pos); i < restriccion; i++)
+            {
+                latitudPP = CorregidoraPuntoPunto[i].Lat;
+                longitudPP = CorregidoraPuntoPunto[i].Lng;
+                latitudPPD = CorregidoraPuntoPunto[i + 1].Lat;
+                longitudPPD = CorregidoraPuntoPunto[i + 1].Lng;
+                DCPC = comparacionesversiondouble(latitudPP, longitudPP, latitudPPD, longitudPPD);
+                //DP SUMA DISTANCIAS Y AL FINAL MANTENDRA TODA LA DISTANCIA RESTANTE
+                distanciaD += DCPC;
+            }
+            return (distanciaD);
+        }
+        double calculodistanciasObrera(double restriccion, double latitud, double longitud)
+        {
+            int pos = Convert.ToUInt16(PosicionIteraO);
+            double distanciaD, latitudPP, longitudPP, longitudPPD, latitudPPD, DCPC;
+            distanciaD = 0;
+            distanciaD = comparacionesversiondouble(latitud, longitud, ObreraPuntoPunto[pos].Lat, ObreraPuntoPunto[pos].Lng);
+            for (int i = (pos); i < restriccion; i++)
+            {
+                latitudPP = ObreraPuntoPunto[i].Lat;
+                longitudPP = ObreraPuntoPunto[i].Lng;
+                latitudPPD = ObreraPuntoPunto[i + 1].Lat;
+                longitudPPD = ObreraPuntoPunto[i + 1].Lng;
+                DCPC = comparacionesversiondouble(latitudPP, longitudPP, latitudPPD, longitudPPD);
+                //DP SUMA DISTANCIAS Y AL FINAL MANTENDRA TODA LA DISTANCIA RESTANTE
+                distanciaD += DCPC;
+            }
+            return (distanciaD);
+        }
+
+
+        //UBICACIÓN
+        double aproximadodellegada(double direccion, double latitud, double longitud,double IDruta)
+        { 
+
+            int entero=0,tiempo;
+            double DP = 0, DT=0,res=0,distanciaD=0,tiempoD=0,
+                Vl;
+            double[] velocidadestiempo=new double [5];
+            velocidadestiempo[0] = 2036.206;
+            Vl = (IDruta == 1) ? VPC1:VPC2;
+            switch (direccion)
+            {
+                case 1:
+                    eliminarparadasO();
+                    entero = Convert.ToUInt16(PosicionIteraO);
+                    
+                    res = (entero <= 1) ? 1 : res;
+                    res = (1 < entero && entero < 34) ? 2 : res;
+                    res = (34 < entero && entero < 60) ? 3 : res;
+                    res = (60 < entero && entero < 68) ? 4 : res;
+                    res = (68 < entero && entero < 86) ? 5 : res;
+                    res = (86 < entero && entero < 100) ? 6 : res;
+
+                    Seleccionderutasacargar(res, 1);
+                    if (entero < 2)
+                    {
+
+                        marcadorOP1.ToolTipText = "No ha partido la ruta. Vas a tiempo";
+                        marcadorOP1.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero < 34)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = (calculodistanciasObrera(34, latitud, longitud)/ Vl) ;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorOP2.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorOP2.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorOP2.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorOP2.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero < 60)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = ((calculodistanciasObrera(60, latitud, longitud)));
+                            tiempoD = (distanciaD)/Vl;
+                            tiempo = Convert.ToInt32(tiempoD);
+                            if (tiempo != 0)
+                                marcadorOP3.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorOP3.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorOP3.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorOP3.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero < 68)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = ((calculodistanciasObrera(68, latitud, longitud)));
+                            tiempoD = (distanciaD) / Vl;
+                            tiempo = Convert.ToInt32(tiempoD);
+                            if (tiempo != 0)
+                                marcadorOP4.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorOP4.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorOP4.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorOP4.ToolTip.Fill = Brushes.White;
+                    }
+
+                    if (entero < 87)
+                    {
+                        if (Vl!=0)
+                        { 
+                            distanciaD = ((calculodistanciasObrera(87, latitud, longitud)));
+                            tiempoD = (distanciaD) / Vl;
+                            tiempo = Convert.ToInt32(tiempoD);
+                            if (tiempo != 0)
+                                marcadorOP5.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorOP5.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorOP5.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorOP5.ToolTip.Fill = Brushes.White;
+                    }
+
+                    if (entero < 90)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = (calculodistanciasObrera(90, latitud, longitud));
+                            tiempoD = (distanciaD )/ Vl;
+                            tiempo = Convert.ToInt32(tiempoD);
+                            if (tiempo != 0)
+                                marcadorOP6.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorOP6.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorOP6.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento"+Environment.NewLine+"Te notificaremos cuando vuelva";
+                        marcadorOP6.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero>=90)
+                    {
+                        eliminarparadasO();
+                        marcadordetrayectoria(4);
+                        MessageBox.Show("La unidad ha terminado el trayecto", "Hola Pistola",MessageBoxButtons.OK,MessageBoxIcon.Information);
+                    }
+
+                    break;
+                case 2:
+                    eliminarparadasC();
+                    entero = Convert.ToUInt16(PosicionIteraC);
+                    res = (entero <= 1) ? 1 : res;
+                    res = (1 < entero && entero < 21) ? 2 : res;
+                    res = (21 < entero && entero < 29) ? 3 : res;
+                    res = (29 < entero && entero < 35) ? 4 : res;
+                    res = (35 < entero && entero < 46) ? 5 : res;
+                    res = (46 < entero && entero < 51) ? 6 : res;
+                    res = (51 < entero && entero < 138) ? 7 : res;
+                    res = (138 < entero && entero < 143) ? 8 : res;
+                    res = (144 < entero && entero < 144) ? 9 : res;
+
+                    Seleccionderutasacargar(res, 2);
+                    
+                    //OBTENER DISTANCIA TOTAL
+                    DT = calculodistanciasCorregidora(143,latitud,longitud);
+
+                    if (entero<2)
+                    {
+
+                        marcadorCP1.ToolTipText = "No ha partido la ruta. Vas a tiempo";
+                        marcadorCP1.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero<21)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(21, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP2.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP2.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP2.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP2.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero < 29)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(29, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP3.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP3.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP3.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP3.ToolTip.Fill = Brushes.White;
+                    }
+                    if (entero < 35)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(35, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP4.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP4.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP4.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP4.ToolTip.Fill = Brushes.White;
+                    }
+
+                    if (entero < 46)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(46, latitud, longitud)/Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP5.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP5.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP5.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP5.ToolTip.Fill = Brushes.White;
+                    }
+                    
+                    if (entero < 51)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(51, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP6.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP6.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP6.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP6.ToolTip.Fill = Brushes.White;
+                    }
+
+                    if (entero < 139)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(139, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP7.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP7.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP7.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP7.ToolTip.Fill = Brushes.White;
+                    }
+
+                    if (entero < 141)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(142, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP8.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP8.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP8.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP8.ToolTip.Fill = Brushes.White;
+                    }
+
+                    if (entero < 142)
+                    {
+                        if (Vl != 0)
+                        {
+                            distanciaD = calculodistanciasCorregidora(143, latitud, longitud) / Vl;
+                            tiempo = Convert.ToInt32(distanciaD);
+                            if (tiempo != 0)
+                                marcadorCP9.ToolTipText = Environment.NewLine + "Tiempo de llegada: " + tiempo + " min";
+                            else
+                                marcadorCP9.ToolTipText = Environment.NewLine + "Atento, la ruta esta muy cerca";
+                        }
+                        else
+                            marcadorCP9.ToolTipText = Environment.NewLine + "La ruta ha dejado de estar en movimiento" + Environment.NewLine + "Te notificaremos cuando vuelva";
+                        marcadorCP9.ToolTip.Fill = Brushes.White;
+                    }
+                    
+                    if (entero>=142)
+                    {
+                        eliminarparadasC();
+                        marcadordetrayectoria(1);
+                        MessageBox.Show("La unidad ha terminado el trayecto", "Hola Pistola", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    break;
+
+            }
+            return (DP);
+        }
+        //FUNCIÓN DE OBTENCIÓN DE DISTANCIAS ENTRE PUNTOS
+        public string comparaciones(string latitud, string longitud, string latitud2, string longitud2)
+        {
+            string d;
+            double dla, dlo, a, c, dauxiliar, lat1, lat2;
+            double lot1 = Convert.ToDouble(longitud) * (Math.PI / 180), lot2 = Convert.ToDouble(longitud2) * (Math.PI / 180);
+            double radiodelatierra = 6371000;
+            lat2 = Convert.ToDouble(latitud2) * (Math.PI / 180);
+            Double.TryParse(latitud, out lat1);
+            lat1 *= (Math.PI / 180);
+            dla = (lat2 - lat1);
+            dlo = (lot2 - lot1);
+            a = Math.Pow((Math.Sin(dla / 2)), 2) + Math.Cos(lat1) * Math.Cos(lat2) * Math.Pow((Math.Sin(dlo / 2)), 2);
+            c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            dauxiliar = radiodelatierra * c;
+            d = Convert.ToString(dauxiliar);
+            return (d);
+        }
+        double comparacionesversiondouble(double latitud, double longitud, double latitud2, double longitud2)
+        {
+            double dla, dlo, a, c, dauxiliar, lat1, lat2;
+            double lot1 = longitud * (Math.PI / 180), lot2 = longitud2 * (Math.PI / 180);
+            double radiodelatierra = 6371000;
+            lat2 = latitud2 * (Math.PI / 180);
+            lat1 = latitud * (Math.PI / 180);
+            dla = (lat2 - lat1);
+            dlo = (lot2 - lot1);
+            a = Math.Pow((Math.Sin(dla / 2)), 2) + Math.Cos(lat1) * Math.Cos(lat2) * Math.Pow((Math.Sin(dlo / 2)), 2);
+            c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            dauxiliar = radiodelatierra * c;
+            return (dauxiliar);
+        }
+
+        //FUNCIÓN PARA OBTENCIÓN DE DISTANCIA MÁS CORTA
+        double PosicionIteraO = 0, PosicionIteraC = 0;
+        double comparacionesdedistancias(double latitudC, double longitudC)
+        {
+            PosicionIteraO = 0; PosicionIteraC = 0;
+            double rutacorta1 = 50000, rutacorta2 = 50000, rutacortadefinitiva = 0, latitudR, longitudR,
+                distanciacalculada1 = 0, distanciacalculada2 = 0;
+            for (int i = 0; i < 127; i++)
+            {
+                latitudR = CorregidoraPuntoPunto[i].Lat;
+                longitudR = CorregidoraPuntoPunto[i].Lng;
+                distanciacalculada1 = comparacionesversiondouble(latitudC, longitudC, latitudR, longitudR);
+                rutacorta1 = (distanciacalculada1 < rutacorta1) ? distanciacalculada1 : rutacorta1;
+                PosicionIteraC = (distanciacalculada1 == rutacorta1) ? i : PosicionIteraC;
+            }
+            for (int s=0;s<91;s++)
+            {
+                latitudR = ObreraPuntoPunto[s].Lat;
+                longitudR = ObreraPuntoPunto[s].Lng;
+                distanciacalculada2 = comparacionesversiondouble(latitudC, longitudC, latitudR, longitudR);
+                rutacorta2 = (distanciacalculada2 < rutacorta2) ? distanciacalculada2 : rutacorta2;
+                PosicionIteraO = (distanciacalculada2 == rutacorta2) ? s : PosicionIteraO;
+            }
+            rutacortadefinitiva = (rutacorta1 < rutacorta2) ? 2 : 1;
+            return (rutacortadefinitiva);
+        }
+
+        //Variables globales de COMPROBACIÓN DE RUTA
+        double D1C1, D2C1, D3C1, D1C2, D2C2, D3C2;
+        int ConC1 = 0, ConC2 = 0;
+        double reconocimientoderutas(double latitudC, double longitudC, double entrada)
+        {
+            double c = 0;
+
+            switch (entrada)
+            {
+                case 1:
+                    if (ConC1 == 0)
+                    {
+                        ConC1++;
+                        D1C1 = comparacionesdedistancias(latitudC, longitudC);
+                    }
+                    else if (ConC1 == 1)
+                    {
+                        ConC1++;
+                        D2C1 = comparacionesdedistancias(latitudC, longitudC);
+                    }
+                    else if (ConC1 == 2)
+                    {
+                        D3C1 = comparacionesdedistancias(latitudC, longitudC);
+                        if (D3C1 == D2C1 && D2C1 == D1C1)
+                        {
+                            c = D3C1;
+                            ConC1 = 0;
+                        }
+                        else
+                            ConC1 = 0;
+                    }
+                    if (D3C1 == D2C1 && D2C1 == D1C1)
+                    {
+                        c = D3C1;
+                    }
+                    break;
+                case 2:
+                    if (ConC2 == 0)
+                    {
+                        ConC2++;
+                        D1C2 = comparacionesdedistancias(latitudC, longitudC);
+                    }
+                    else if (ConC2 == 1)
+                    {
+                        ConC2++;
+                        D2C2 = comparacionesdedistancias(latitudC, longitudC);
+                    }
+                    else if (ConC2 == 2)
+                    {
+                        D3C2 = comparacionesdedistancias(latitudC, longitudC);
+                        if (D3C2 == D2C2 && D2C2 == D1C2)
+                        {
+                            c = D3C2;
+                            ConC2 = 0;
+                        }
+                        else
+                            ConC2 = 0;
+                    }
+                    if (D3C2 == D2C2 && D2C2 == D1C2)
+                    {
+                        c = D3C2;
+                    }
+                    break;
+            }
+            textBox1.Text ="C1"+ D1C1 + "," + D2C1 + "," + D3C1+Environment.NewLine+ "C2" + D1C2 + "," + D2C2 + "," + D3C2;
+            return (c);
+        }
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string GLL, longitud2, latitud2, latitud, longitud, longitudmarca = "0", latitudmarca = "0";
+            //Movimiento de Mapa con click derecho y obtención del mapa de alguno de los provedores.
+            latitud = "20.59178583333333";
+            longitud = " -100.412269333333";
+            //Obtención de Distancias.
+            //Parada de la obrera
+            latitud2 = "20.618612";
+            longitud2 = "-100.421415";
+            string d2 = comparaciones(latitud, longitud, latitud2, longitud2);
+            //Parada de CU
+            latitud2 = "20.592529";//20.592529,-100.413392
+            longitud2 = "-100.413392";
+            string d1 = comparaciones(latitud, longitud, latitud2, longitud2);
+            //Parada Boulevares<p
+            latitud2 = "20.614361";
+            longitud2 = "-100.386672";
+            string d3 = comparaciones(latitud, longitud, latitud2, longitud2);
+            //Entrada Campus Aeropuerto
+            latitud2 = "20.625315"; //20.625315,-100.371760
+            longitud2 = "-100.371760";
+            string d4 = comparaciones(latitud, longitud, latitud2, longitud2);
+            //Comparación de distancias.
+            double dis1 = Convert.ToDouble(d1), dis2 = Convert.ToDouble(d2), dis3 = Convert.ToDouble(d3), dis4 = Convert.ToDouble(d4);
+            double distanciamascorta = (dis1 < dis2) ? dis1 : dis2;
+            distanciamascorta = (dis3 < distanciamascorta) ? dis3 : distanciamascorta;
+            distanciamascorta = (dis4 < distanciamascorta) ? dis4 : distanciamascorta;
+            //Establecimiento de parada
+            if (distanciamascorta == dis1)
+            {
+                latitudmarca = "20.592529";
+                longitudmarca = "-100.413392";
+            }
+            //Posicionamiento del mapa
+            gMapControl1.Position = new GMap.NET.PointLatLng(Convert.ToDouble(latitudmarca), Convert.ToDouble(longitudmarca));
+            gMapControl1.MinZoom = 1;
+            gMapControl1.MaxZoom = 100;
+            gMapControl1.Zoom = 14;
+
+            //Generación del marcador
+            PointLatLng point = new PointLatLng(Convert.ToDouble(latitudmarca), Convert.ToDouble(longitudmarca));
+            //Forma del puntero de localización
+            GMap.NET.WindowsForms.GMapMarker marker = new GMarkerGoogle(point, new Bitmap("C:\\Users\\imoji\\source\\repos\\WindowsFormsApp3\\user.png"));
+            //Creación de un conjunto de capas de marcadores
+            marker.ToolTipText =Environment.NewLine + "Tu parada mas cercana";
+            marker.ToolTip.Fill = Brushes.LightCyan;
+            marker.ToolTip.Foreground = Brushes.Black;
+
+            GMapOverlay paradas = new GMapOverlay("paradas");
+
+            paradas.Clear();
+            gMapControl1.Overlays.Remove(paradas);
+            paradas.Markers.Add(marker);
+            gMapControl1.Overlays.Add(paradas);
+        }
+        /*
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox1.Checked == true)
+            {
+                checkBox2.Checked = false;
+                cargarrutas(2);
+                gMapControl1.Zoom = 13;
+                gMapControl1.Zoom += 0.00001;
+            }
+            else
+            {
+                rutacapaOI.Clear();
+                gMapControl1.Overlays.Remove(rutacapaOI);
+            }
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox2.Checked == true)
+            {
+                checkBox1.Checked = false;
+                cargarrutas(1);
+                gMapControl1.Zoom = 13;
+                gMapControl1.Zoom += 0.00001;
+
+            }
+            else
+            {
+                rutacapaCI.Clear();
+                gMapControl1.Overlays.Remove(rutacapaCI);
+            }
+        }
+        */
+        //CARGA DE RUTAS VISUALES.
+        GMapOverlay rutacapaCI = new GMapOverlay("rutacapaCI");
+        GMapOverlay rutacapaOI = new GMapOverlay("rutacapaOI");
+        int cargarrutas(int lle)
+        {
+            switch (lle)
+            {
+                case 0:
+                    System.IO.StreamReader ObjetoLector = new System.IO.StreamReader("C:\\Users\\imoji\\source\\repos\\WindowsFormsApp3\\WindowsFormsApp3\\Corregidora.txt");
+                    string stringdealmacendecoordenada, latitudC, longitudC;
+                    for (int contador = 0; contador < 26; contador++)
+                    {
+                        stringdealmacendecoordenada = ObjetoLector.ReadLine();
+                        //son 22 carácteres por linea.
+                        latitudC = stringdealmacendecoordenada.Substring(0, 9);
+                        longitudC = stringdealmacendecoordenada.Substring(11, 11);
+                        PointLatLng addpunto = new PointLatLng(Convert.ToDouble(latitudC), Convert.ToDouble(longitudC));
+                        _RutaCorregidora.Add(addpunto);
+                    }
+                    ObjetoLector.Close();
+
+                    ObjetoLector = new System.IO.StreamReader("C:\\Users\\imoji\\source\\repos\\WindowsFormsApp3\\WindowsFormsApp3\\Obrera.txt");
+                    for (int lecturacontador = 0; lecturacontador < 25; lecturacontador++)
+                    {
+                        stringdealmacendecoordenada = ObjetoLector.ReadLine();
+                        latitudC = stringdealmacendecoordenada.Substring(0, 9);
+                        longitudC = stringdealmacendecoordenada.Substring(11, 11);
+                        PointLatLng addpunto = new PointLatLng(Convert.ToDouble(latitudC), Convert.ToDouble(longitudC));
+                        _RutaObrera.Add(addpunto);
+                    }
+                    ObjetoLector.Close();
+                    ObjetoLector = new System.IO.StreamReader("C:\\Users\\imoji\\source\\repos\\WindowsFormsApp3\\WindowsFormsApp3\\CorregidoraPuntoPunto.txt");
+                    for (int iterator = 0; iterator < 144; iterator++)
+                    {
+                        stringdealmacendecoordenada = "0";
+                        stringdealmacendecoordenada = ObjetoLector.ReadLine();
+                        
+                            latitudC = stringdealmacendecoordenada.Substring(0, 9);
+                            longitudC = stringdealmacendecoordenada.Substring(11, 11);
+                        PointLatLng punto = new PointLatLng(Convert.ToDouble(latitudC), Convert.ToDouble(longitudC));
+                        CorregidoraPuntoPunto.Add(punto);
+                    }
+                    ObjetoLector.Close();
+
+                    ObjetoLector = new System.IO.StreamReader("C:\\Users\\imoji\\source\\repos\\WindowsFormsApp3\\WindowsFormsApp3\\obrera1.txt");
+                    for (int Holyiterator = 0; Holyiterator < 91; Holyiterator++)
+                    {
+                        stringdealmacendecoordenada = "0";
+                        stringdealmacendecoordenada = ObjetoLector.ReadLine();
+
+                        latitudC = stringdealmacendecoordenada.Substring(0, 9);
+                        longitudC = stringdealmacendecoordenada.Substring(10, 11);
+                        PointLatLng punto = new PointLatLng(Convert.ToDouble(latitudC), Convert.ToDouble(longitudC));
+                        ObreraPuntoPunto.Add(punto);
+                    }
+                    ObjetoLector.Close();
+
+                    break;
+                case 1:
+                    var rutaC = GoogleMapProvider.Instance.GetRoute(_RutaCorregidora[0], _RutaCorregidora[3], false, false, 13);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                                rutaC = GoogleMapProvider.Instance.GetRoute(_RutaCorregidora[0], _RutaCorregidora[3], false, false, 13);
+                                break;
+                            case 1:
+                                rutaC = GoogleMapProvider.Instance.GetRoute(_RutaCorregidora[3], _RutaCorregidora[15], false, false, 13);
+                                break;
+                            case 2:
+                                rutaC = GoogleMapProvider.Instance.GetRoute(_RutaCorregidora[15], _RutaCorregidora[25], false, false, 13);
+                                break;
+                        }
+                        var rC = new GMapRoute(rutaC.Points, "Ruta Obrera");
+
+                        rC.Stroke = new Pen(Color.SeaGreen, 2);
+                        rutacapaCI.Routes.Add(rC);
+                        gMapControl1.Overlays.Add(rutacapaCI);
+
+                    }
+                    break;
+                case 2:
+                    var rutaO = GoogleMapProvider.Instance.GetRoute(_RutaObrera[0], _RutaObrera[24], false, false, 13);
+                    var rutasO = new GMapRoute(rutaO.Points, "Ruta Obrera");
+                    rutasO.Stroke = new Pen(Color.Coral, 2);
+                    rutacapaOI.Routes.Add(rutasO);
+                    gMapControl1.Overlays.Add(rutacapaOI);
+                    break;
+
+            }
+            return (0);
+        }
+
+        int Eliminar(int er)
+        {
+            //Borrar todo el buffer, se abre y cierra para evitar que se repita la información.
+            serialPort1.DiscardInBuffer();
+            serialPort1.DiscardOutBuffer();
+            serialPort1.Close();
+            serialPort1.Open();
+            //codigo AT que realiza la limpieza (el primer digito es el indice, pero en este caso es despreciado y el 4 significa que
+            //se eliminará todos los mensajes)
+            serialPort1.Write("AT+CMGD=1,4\r\n");
+            //para que tome tiempo de procesamiento
+            timer2.Start();
+            timer2.Stop();
+            return (0);
+        }
+
+        double marcadordetrayectoria(double opcion)
+        {
+            switch (opcion)
+            {
+                case 0:
+                    gMapControl1.Overlays.Remove(rutacapaCI);
+                    break;
+                case 1:
+
+                    rutacapaOI.Clear();
+                    gMapControl1.Overlays.Remove(rutacapaOI);
+                    cargarrutas(2);
+                    gMapControl1.Zoom += 0.00001;
+                    break;
+                case 2:
+
+                    rutacapaCI.Clear();
+                    gMapControl1.Overlays.Remove(rutacapaCI);
+                    cargarrutas(1);
+                    gMapControl1.Zoom += 0.00001;
+                    break;
+                case 4:
+                    gMapControl1.Overlays.Remove(rutacapaOI);
+                    break;
+            }
+            return (0);
+        }
+        //Creación de un conjunto de capas que se usarán en los marcadores
+        GMapOverlay Camion1 = new GMapOverlay("Camion1");
+        GMapOverlay Camion2 = new GMapOverlay("Camion2");
+        double dirC1, dirC2;
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            int aba, abe;
+            string lectura = "0", lectura2 = "0", llegada1 = "0", llegada1primo = "0", llegada2, latitudC2, LongitudC2, latitud, longitud;
+            string direccionC2 = "Desconocido", direccionC1 = "Desconocido";
+            double dlong, dlat, C2long, C2lat, C2lati,C2longt, Velocidad2, velocidad;
+
+            serialPort1.WriteLine("AT+CMGL=\"ALL\"\r");
+            lectura = serialPort1.ReadExisting();
+
+            if (lectura.Contains("--C1") == true)
+            {
+                aba = lectura.IndexOf("--C1");
+                lectura2 = lectura.Substring(aba, 32);
+
+                if (lectura2.StartsWith("--C1") == true)
+                {
+                    if (lectura2 != llegada1)
+                    {
+
+                        llegada1 = lectura2;
+                        //--C1 - 2035.50284 - 10024.7165 - 0.43
+                        latitud = lectura2.Substring(5, 10);
+                        longitud = lectura2.Substring(16, 10);
+
+                        if (double.TryParse(lectura2.Substring(27, 3), out velocidad))
+                        {
+                            if (double.TryParse(latitud.Substring(0, 10), out dlat))
+                            {
+                                if (double.TryParse(longitud.Substring(0, 10), out dlong))
+                                {
+                                    velocidad = Convert.ToDouble(lectura2.Substring(27, 3));
+                                    double velocidadparamostrar = velocidad;
+                                    velocidadparamostrar = conversionunidadesKM(velocidadparamostrar);
+                                    textBox1.Text = lectura2;
+                                    //textBox1.Text = latitud + Environment.NewLine + longitud+Environment.NewLine+velocidad;
+                                    dlat = 0;
+                                    dlat = (Convert.ToDouble(latitud.Substring(2, 8)) / 60) + Convert.ToDouble(latitud.Substring(0, 2));
+                                    dlong = 0;
+                                    dlong = ((Convert.ToDouble(longitud.Substring(3, 7)) / 60) + Convert.ToDouble(longitud.Substring(0, 3))) * -1;
+                                    PointLatLng Camion1P = new PointLatLng(dlat, dlong);
+                                    //Forma del puntero de localización
+                                    GMap.NET.WindowsForms.GMapMarker marcadorC1;
+                                    marcadorC1 = new GMarkerGoogle(Camion1P, GMarkerGoogleType.blue_dot);
+                                    Camion1.Clear();
+                                    gMapControl1.Overlays.Remove(Camion1);
+                                    Camion1.Markers.Add(marcadorC1);
+                                    gMapControl1.Overlays.Add(Camion1);
+                                    
+                                    velocidad = conversionunidadesnodosmin(velocidad);
+                                    velocidadPromedio(velocidad, 1);
+                                    //Reconocimiento de ruta
+                                    dirC1 = reconocimientoderutas(dlat, dlong, 1);
+                                    marcadordetrayectoria(dirC1);
+                                    aproximadodellegada(dirC1, dlat, dlong,1);
+                                    switch (dirC1)
+                                    {
+                                        case 0:
+                                            direccionC1 = "Desconocido";
+                                            break;
+                                        case 1:
+                                            direccionC1 = "Ruta Obrera dirección Aeropuerto";
+
+                                            break;
+                                        case 2:
+                                            direccionC1 = "Ruta Corregidora dirección Aeropuerto";
+                                            break;
+                                    }
+                                    marcadorC1.ToolTipText = Environment.NewLine + "Unidad 1" + Environment.NewLine+ "Velocidad Actual:" + velocidadparamostrar + " Km/h" + Environment.NewLine + "Ruta seguida:" + direccionC1
+                                        + Environment.NewLine+VPC1;
+                                    marcadorC1.ToolTip.Fill = Brushes.AliceBlue;
+                                    gMapControl1.Zoom -= .0000001;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            serialPort1.DiscardInBuffer();
+            serialPort1.DiscardOutBuffer();
+
+            if (lectura.Contains("--C2") == true)
+            {
+                abe = lectura.IndexOf("--C2");
+                llegada2 = lectura.Substring(abe, 32);
+
+                if (llegada2.StartsWith("--C2") == true)
+                {
+                    if (llegada2 != llegada1primo)
+                    {
+
+                        llegada1primo = llegada2;
+
+                        latitudC2 = llegada2.Substring(5, 10);
+                        LongitudC2 = llegada2.Substring(16, 10);
+                        if (double.TryParse(latitudC2.Substring(0, 10), out C2lati))
+                        {
+                            if (double.TryParse(LongitudC2.Substring(0, 10), out C2longt))
+                            {
+                                if (double.TryParse(llegada2.Substring(27, 4), out Velocidad2))
+                                {
+                                    Velocidad2 = Convert.ToDouble(llegada2.Substring(27, 4));
+                                    double Velocidadparamostrar = Velocidad2;
+                                    C2lat = (Convert.ToDouble(latitudC2.Substring(2, 8)) / 60) + Convert.ToDouble(latitudC2.Substring(0, 2));
+                                    C2long = ((Convert.ToDouble(LongitudC2.Substring(3, 7)) / 60) + Convert.ToDouble(LongitudC2.Substring(0, 3))) * -1;
+                                    PointLatLng PuntoCamion2 = new PointLatLng(C2lat, C2long);
+                                    GMap.NET.WindowsForms.GMapMarker marcador = new GMarkerGoogle(PuntoCamion2, GMarkerGoogleType.red_dot);
+                                    Camion2.Clear();
+                                    gMapControl1.Overlays.Remove(Camion2);
+                                    Camion2.Markers.Add(marcador);
+                                    gMapControl1.Overlays.Add(Camion2);
+                                    
+                                    Velocidadparamostrar = conversionunidadesKM(Velocidadparamostrar);
+                                    Velocidad2 = conversionunidadesnodosmin(Velocidad2);
+                                    velocidadPromedio(Velocidad2, 2);
+                                    //Reconocimiento de ruta
+                                    dirC2 = reconocimientoderutas(C2lat, C2long, 2);
+                                    aproximadodellegada(dirC2, C2lat, C2long,2);
+                                    switch (dirC2)
+                                    {
+                                        case 0:
+                                            direccionC2 = "Desconocido";
+                                            break;
+                                        case 1:
+                                            direccionC2 = "Ruta Obrera dirección Aeropuerto";
+
+                                            break;
+                                        case 2:
+                                            direccionC2 = "Ruta Corregidora dirección Aeropuerto";
+                                            break;
+                                    }
+                                    marcadordetrayectoria(dirC2);
+                                    marcador.ToolTipText = Environment.NewLine + "Unidad: 2" + Environment.NewLine + "Velocidad Actual:" + Velocidadparamostrar + " Km/h" + Environment.NewLine + "Ruta seguida:" + direccionC2;
+                                    gMapControl1.Zoom += 0.00000001;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //Sólo es para actualizar el mapa (los cursores en su aparición no son exactos, con esto se lográ que sean exactos.
+            
+            //Se eliminan los mensajes almacenados y la variable de obtención de datos.         
+            lectura = "0";
+            Eliminar(0);
+        }
+        double conversionunidadesKM(double velocidada)
+        {
+            velocidada = velocidada * 1.852;
+            return (velocidada);
+        }
+
+        private void gMapControl1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+
+        }
+        private void Form2_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (serialPort1.IsOpen)
+                serialPort1.Close();
+        }
+        //Necesario para el cambio del texto en las pruebas.
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        { }
+        private void gMapControl1_Load_1(object sender, EventArgs e)
+        { }
+        //Necesario para recibir datos.
+        private void serialPort1_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        { }
+        double conversionunidadesnodosmin(double velocidadrecibida)
+        {
+            velocidadrecibida *= 30.8667;
+            return (velocidadrecibida);
+        }
+
+    }
+
+}

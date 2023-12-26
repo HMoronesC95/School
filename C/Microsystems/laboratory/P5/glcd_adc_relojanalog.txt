@@ -1,0 +1,180 @@
+#include <18F4550.h>
+#device ADC=8
+#fuses NOWDT,NOPROTECT,INTRC
+#use delay(clock=8M)
+//#include <glcd.c>
+#include <st7920.h>
+#include <graphics.c>
+#include <math.h>
+#byte OSCCON=0b1110101
+
+int incremento=0,i=0,j=0;
+float voltaje_an0=0;
+char voltaje_numero[7]={"000.000"};
+
+void posicion();
+void relojgra();
+void minutos();
+void horas();
+int a=0,b=0,ctt=0,c=0,ct=0,d=0;
+int bt=0;
+int xm[]={
+//Primer cuadrante
+20,22,24,26,28,30,32,33,35,36,37,38,39,40,40,
+//Segundo Cuadrante
+40,40,40,39,38,37,36,35,33,32,30,28,26,24,22,
+//Tercer cuadrante
+20,18,16,14,12,10,8,7,5,4,3,2,1,0,0,
+//cuarto cuadrante 
+0,0,0,1,2,3,4,5,7,8,10,12,14,16,18,20,20,20
+};
+int ym[]={
+//Primer
+0,0,0,1,2,3,4,5,7,8,10,12,14,16,18,
+//Segundo
+20,22,24,26,28,30,32,33,35,36,37,38,39,40,40,
+//Tercer
+40,40,40,39,38,37,36,35,33,32,30,28,26,24,22,
+//Cuarto
+20,18,16,14,12,10,8,7,5,4,3,2,1,0,0,0,0,0
+};
+
+int xh[]={
+20,30,37,
+40,37,30,
+20,10,3,
+0,3,10,
+20,20
+
+};
+
+int yh[]={
+0,3,10,
+20,30,37,
+40,37,30,
+20,10,3
+,0,0
+};
+
+char minutostexto[4];
+char segundostexto[4];
+char horastexto[]="0";
+char es[4]={":"};
+#int_TIMER0
+void TIMER0_A()
+{
+   set_timer0(57724);
+   //set_timer0(64000);
+   a++;
+   voltaje_an0=(read_adc())*5./255.;
+}
+void main() 
+{  
+   setup_adc(ADC_CLOCK_INTERNAL);
+   setup_adc_ports(AN0);
+   setup_timer_0(RTCC_INTERNAL|RTCC_DIV_256);
+   enable_interrupts(INT_timer0);
+   enable_interrupts(GLOBAL); 
+   set_timer0(57724); 
+   //set_timer0(64000);
+   //glcd_init(ON);
+   glcd_init_graph();
+   glcd_fillScreen(0);
+   glcd_update();
+   while(TRUE)
+   {  
+   
+      sprintf(voltaje_numero,"V=%.2f",voltaje_an0);     
+      glcd_rect(85, 2, 120, 10, YES, OFF);
+      glcd_text57(80, 3, voltaje_numero, 1, ON);
+      incremento=voltaje_an0*10;  
+      glcd_rect(89,10,111,64,YES,OFF);     
+      for(i=0,j=64;i<incremento;i++,j--) 
+            glcd_line(90,j,110,j,ON);
+      glcd_update();   
+      
+      
+      relojgra();
+      d=1;
+      //output_toggle(pin_a0);   
+      if(a>59)
+      {
+         
+         b++;
+         a=1;
+      }
+      if (b>59)
+      {
+         ctt++;
+         c++;
+         b=0;
+      }
+      
+      if (c>23)
+      {
+         c=0;
+      }
+      
+   }
+}
+
+void relojgra()
+{
+   if (ctt>=12)
+   {
+      ctt=0;
+      glcd_line(20,20,xh[11],yh[11],OFF);
+   }
+   else if (b==0)
+   {
+      glcd_line(20,20,xm[59],ym[59],OFF);
+   }
+   //glcd_circle(20,20,20,NO,ON);
+   if (d==0)
+      glcd_circle(20,20,20,NO,ON);
+    //glcd_circle(32,32,4,YES,ON);
+   sprintf(segundostexto,"%i",a);
+   sprintf(minutostexto,"%i",b);
+   if (c!=ct||d==0)
+   {
+      ct=c;
+      sprintf(horastexto,"%i",c);
+      glcd_bar(16, 50, 25, 50, 18, off);
+      glcd_text57(16,50,horastexto,1,ON);
+      glcd_text57(27,50,es,1,ON);   
+      glcd_line(20,20,xh[ctt-1],yh[ctt-1],OFF);//
+      glcd_line(20,20,xh[ctt],yh[ctt],ON);
+   }
+   
+   if (b!=bt||d==0)
+   {
+      
+      bt=b;
+      glcd_bar(30, 50, 50, 50, 20, off);
+      glcd_text57(35,50,minutostexto,1,ON);
+      glcd_text57(46,50,es,1,ON);
+      glcd_line(20,20,xm[b],ym[b],ON);//minutos
+      glcd_pixel(xm[b],ym[b],ON);
+      glcd_line(20,20,xm[b-1],ym[b-1],OFF);//minutos
+      switch (b){
+         case 1:
+            glcd_line(20,20,xh[0],yh[0],ON);
+         break;
+         case 16:
+            if (ctt==3)
+            glcd_line(20,20,xh[3],yh[3],ON);
+         break;
+         case 31:
+           if (ctt==6)
+            glcd_line(20,20,xh[6],yh[6],ON);
+         break;
+         case 46:
+           if (ctt==9)
+            glcd_line(20,20,xh[9],yh[9],ON);
+         break;
+         }
+   }
+   glcd_bar(50, 50, 64, 50, 20, off);
+   glcd_text57(52,50,segundostexto,1,ON);
+   glcd_update();
+}

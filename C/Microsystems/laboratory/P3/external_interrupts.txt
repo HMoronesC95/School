@@ -1,0 +1,84 @@
+#include <18F4550.h>
+#fuses NOPROTECT,NOWDT,INTRC
+#use delay(clock=8M)
+int secuencia[8]={pin_d0,pin_d1,pin_d2,pin_d3,pin_d4,pin_d5,pin_d6,pin_d7};
+int j=0,a=0,i=0;
+int flag[3]={0,0,0};
+
+
+#int_EXT
+void interrupt_b0()
+{     
+   for(j=0;j<2;j++)
+   {
+      for(i=0;i<8;i++)
+      {
+         output_d(0);
+         output_high(secuencia[i]);
+         delay_ms(100);        
+      }
+      for(i=8;i>0;i--)
+      {
+         output_d(0);
+         output_high(secuencia[i]);
+         delay_ms(100);
+      }
+   }
+   clear_interrupt(INT_EXT1);
+   clear_interrupt(INT_EXT2);
+}
+#int_EXT1
+void interrupt_b1()
+{  
+   for(i=0;i<8;i++)
+   {
+      output_d(0);
+      output_d(0b01010101);  
+      delay_ms(100);
+      output_d(0);
+      output_d(0b10101010);
+      delay_ms(100);
+   }
+   clear_interrupt(INT_EXT);
+   clear_interrupt(INT_EXT2);
+}
+
+#int_EXT2
+void interrupt_b2()
+{  
+   for(j=0;j<2;j++)
+   {
+      output_d(0);
+      for(i=0;i<8;i++)
+      {
+         output_high(secuencia[i]);
+         delay_ms(100);
+      }
+      for(i=0;i<8;i++)
+      {
+         output_low(secuencia[i]);
+         delay_ms(100);
+      }
+   }
+   clear_interrupt(INT_EXT);
+   clear_interrupt(INT_EXT1);
+}
+
+void main()
+{    
+   enable_interrupts(int_ext);
+   enable_interrupts(int_ext1);
+   enable_interrupts(int_ext2);
+   
+   enable_interrupts(global);
+   
+   while(true)
+   {   
+      for(a=0;;a++)
+      {  
+         output_d(a);
+         delay_ms(100);            
+      }
+
+   }//fin del ciclo infinito  
+}//fin del main 

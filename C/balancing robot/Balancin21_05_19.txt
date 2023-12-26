@@ -1,0 +1,636 @@
+#include  <18f4550.h>
+#FUSES    HSPLL,NOWDT,NOPROTECT,NOLVP,NODEBUG,USBDIV,PLL5,CPUDIV1,VREGEN              //NOWDT,NOPROTECT,HS       
+#use      delay(clock=48000000)  
+#use      I2C(master, sda=PIN_c6, scl=PIN_c7, fast)  //You can change, according your board ports
+//#use      rs232(baud=9600,xmit=PIN_C6,rcv=PIN_C7)    //You can change, according your board ports
+#include  "MPU6050.C"
+#include  <math.h>
+/*
+#define LCD_ENABLE_PIN  PIN_D0                                
+#define LCD_RS_PIN      PIN_D1
+#define LCD_RW_PIN      PIN_D2                                  
+#define LCD_DATA4       PIN_D4                                   
+#define LCD_DATA5       PIN_D5                                  
+#define LCD_DATA6       PIN_D6                                    
+#define LCD_DATA7       PIN_D7
+#include  <lcd.c>
+*/
+#include <stdlib.h>
+#use fast_io(D)
+
+
+//variables para el pendulo
+signed int8 A_data[9];
+signed int8 G_data[2];
+signed int16 ax=0,ay=0,az=0;
+signed int16 gy=0;
+float velocidad_gy=0,velocidad_ax=0;
+float ang_y=0,ana_x=0,ana_y=0,ana_z=0,a_y=0.;
+
+//Valor de los offsets
+signed int32 ax_o=0,ay_o=0,az_o=0;
+signed int32 gy_o=0;
+
+//ganancias de control
+float theta_d=-1.,e_integral=0,e_derivativo=0,e_proporcional=0,e_anterior=0,velocidad_deseada=400.,ep_velocidad=0,ei_velocidad=0;
+float kp1=19.;//sin peso 19.     
+float kd1=400.;//sin peso 400      
+float ki1=0.08;// con peso 0.08  
+float kp2=0.000;  //0.0001
+float ki2=0.000008;   //0.00008
+int1 reset=0;
+
+//variables para pwm
+signed int32 duty_i=0,duty_d=0;
+unsigned int8 duty_i_8=0,duty_d_8=0;
+int offset_pwm_i=0.,offset_pwm_d=0.,limite_pwm=250;    //duty_i es ccp1, duty dos es ccp2
+
+//eeprom
+int8 guardado=0,interno=49;
+void eeprom();
+void reinicio();
+
+//variables para sensor de distancia
+int sensor[7];
+float factor_direccion=0,factor_d=0,factor_i=0;
+int16 contador_avance=0;
+
+//funcion para el sensor de direccion
+void sensor_direccion();
+
+//variables para encoder
+int16 cont1=0.;
+int16 cont2=0.;
+float t1=0.;
+float t2=0.;
+float ttotal1=1.;
+float ttotal2=1.;
+float w1=0.;         
+float w2=0.;
+float velocidad_total=0.;
+int1 reset_v=0;
+
+//leds activos, calibracion A0, cruce por cero B3, eeprom B4, while true C0
+
+#INT_EXT1 
+void isr()
+{
+  t1= get_timer0();
+  ttotal1=ttotal1+t1;
+  cont1=cont1+1;
+  set_timer0(0);
+ // output_toggle(pin_a0);
+}
+
+#INT_EXT2
+void isr1()
+{ 
+  t2=get_timer3();  
+  cont2=cont2+1;
+  ttotal2=ttotal2+t2;
+  set_timer3(0);
+}
+
+#INT_EXT
+void guardado_offsets()
+{
+   guardado=read_eeprom(12);
+   if (guardado==49||guardado==-1)
+   {
+      for (int aaa=0;aaa<3;aaa++)
+         {
+            output_toggle(pin_b4);
+            delay_ms(250);
+         }
+      eeprom();
+      write_eeprom(12,30);
+   }
+   else 
+   {
+      output_low(pin_b4);
+      write_eeprom(0,49);
+      reinicio();
+      write_eeprom(12,49);
+   }
+}
+
+void main()
+{
+/*
+lcd_init();
+printf(lcd_putc,"\f");
+printf(lcd_putc," MPU6050 Gyro   \n");
+printf(lcd_putc," Accelerometer  ");
+delay_ms(1000);
+printf(lcd_putc,"\f");
+*/
+
+interno=read_eeprom(0);
+mpu6050_init();    
+
+mpu6050_write(0x1A,0);
+
+if (interno==49||interno==-1)
+   {
+      reinicio();   
+   }
+  else 
+  {
+         output_high(pin_b4);
+         int ane[3];
+         int as;
+         ane[0]=read_eeprom(81);
+         ane[1]=read_eeprom(82);
+         as=read_eeprom(110);
+         gy_o=make16(ane[1],ane[0]);
+         if (as==50)
+            {
+               gy_o*=-1;
+            }
+         ane[2]=0;
+         ane[0]=read_eeprom(83);
+         ane[1]=read_eeprom(84);
+         ane[2]=read_eeprom(2);
+         ax_o=make16(ane[1],ane[0]);
+            if (ane[2]==1)
+            {
+               ax_o*=-1;
+            }
+         ane[2]=0;
+         ane[0]=read_eeprom(85);
+         ane[1]=read_eeprom(86);
+         ane[2]=read_eeprom(3);
+         ay_o=make16(ane[1],ane[0]);
+            if (ane[2]==1)
+            {
+               ay_o*=-1;
+            }
+         ane[2]=0;
+         ane[0]=read_eeprom(87);
+         ane[1]=read_eeprom(88);
+         ane[2]=read_eeprom(4);
+         az_o=make16(ane[1],ane[0]);
+            if(ane[2]==1)
+            {
+               az_o*=-1;
+            }
+  }
+  
+   //Habilita las Interrupcciones
+   enable_interrupts(INT_TIMER1);
+   enable_interrupts(INT_EXT);
+   enable_interrupts(int_ext1); //Activa interrupcion por RB1
+   ext_int_edge(L_TO_H);    //Activa interrupción por flanco de subida
+   enable_interrupts(int_ext2);
+   ext_int_edge(L_TO_H);    //Activa interrupción por flanco de subida
+   enable_interrupts(GLOBAL);  //Habilita interrupciones de forma global
+   
+   setup_ccp1(ccp_pwm);
+   setup_ccp2(ccp_pwm);   
+
+   setup_timer_0(RTCC_INTERNAL|rtcc_div_8); 
+   setup_timer_3(T3_INTERNAL|t3_div_by_8);
+   setup_timer_2(T2_DIV_BY_1,255,1); 
+ 
+   while(TRUE)
+   {   
+   gy_o=-184.05;
+   ax_o=695.2;
+   ay_o=-330.2;
+   az_o=16384-13084.9;
+   
+  // theta_d=-0.2;
+   
+   if(ttotal1!=0 && ttotal2!=0)
+   {
+      w1=((cont1-1)/ttotal1);   //velocidad angular motor izquierda
+      w2=((cont2-1)/ttotal2);   //velocidad angular motor derecha (cinta)
+      //cuidar el desbordamiento de las variables
+      // cada cruce por cero los contadores y el tiempo se reinician 
+      velocidad_total=(w1+w2)/2;      
+      if(a_y<0)
+         velocidad_total=-1*velocidad_total;      
+   }
+ 
+   if(abs(velocidad_total)<110)  //la velocidad minima es una cuenta sobre 9.7 milis
+   {
+      velocidad_total=0;
+      w1=0;
+      w2=0;
+      cont1=0.;
+      cont2=0.;
+      ttotal1=1.;
+      ttotal2=1.;
+      output_toggle(pin_a0);
+   }
+   
+   if(cont1>=1000 || cont2>=1000 ||ttotal1>=1000  || ttotal2>1000)
+   {
+      cont1=0.;
+      cont2=0.;
+      ttotal1=1.;
+      ttotal2=1.; 
+   }
+   
+   if(velocidad_total>200)
+   {
+      theta_d=0;     
+      ei_velocidad=0;
+   }
+   else 
+      theta_d=-1.;
+   
+   
+   
+   if(velocidad_total<velocidad_deseada && reset_v==0)
+   {
+      ei_velocidad=0;
+      reset_v=1;
+      //output_high(pin_b3);
+   }
+   else if(velocidad_total>velocidad_deseada && reset_v==1)
+   {
+      ei_velocidad=0;
+      reset_v=0;
+     // output_low(pin_b3);
+   }
+   
+   
+   gy=make16(G_data[0],G_data[1])-gy_o;
+
+   ang_y=0.0037*((250.*gy)/32768.);
+   velocidad_gy=((250.*gy)/32768.);
+  
+   ax=make16(A_data[0],A_data[1])-ax_o;      
+   ay=make16(A_data[2],A_data[3])-ay_o;     
+   az=make16(A_data[4],A_data[5])+az_o;   
+   ana_x=(9.81*ax)/16384.;
+   ana_y=(9.81*ay)/16384.;
+   ana_z=(9.81*az)/16384.;
+   
+   velocidad_ax=(0.003)*ana_x;
+   
+//   ana_x=atan2(ana_y,sqrt(ana_x*ana_x+ana_z*ana_z))*(180.0/3.1416);
+   ana_y=(-atan2(ana_x,sqrt(ana_y*ana_y+ana_z*ana_z)))*(180.0/3.1416);
+   
+   a_y=0.993*(a_y+ang_y)+0.007*(ana_y);   //filtro de complemento para la obtencion del angulo del pendulo 
+
+   A_data[0]=mpu6050_read(0x3B); //Read X axis(LSB)
+   A_data[1]=mpu6050_read(0x3C); //Read X axis(MSB)
+   A_data[2]=mpu6050_read(0x3D); //Read Y axis(LSB)
+   A_data[3]=mpu6050_read(0x3E); //Read Y axis(MSB)
+   A_data[4]=mpu6050_read(0x3F); //Read Z axis(LSB)
+   A_data[5]=mpu6050_read(0x40); //Read Z axis(MSB)
+ 
+   G_data[0]=mpu6050_read(0x45); //Read Y axis(LSB)
+   G_data[1]=mpu6050_read(0x46); //Read Y axis(MSB)       
+ 
+   if(a_y<theta_d && reset==0)
+   {
+      e_integral=0;
+      reset=1;
+      //output_high(pin_b3);
+   }
+   else if(a_y>theta_d && reset==1)
+   {
+      e_integral=0;
+      reset=0;
+     // output_low(pin_b3);
+   }
+   
+         e_proporcional=a_y-theta_d;  //cuando cae al frente a_y es negativo
+         ep_velocidad=abs(velocidad_total-velocidad_deseada);
+         
+         if(a_y>theta_d)
+         {
+            e_derivativo=e_proporcional-e_anterior;
+            if(e_derivativo>0)
+               e_derivativo=e_derivativo/8;
+         }
+         else if(a_y<theta_d)
+         {
+            e_derivativo=-e_proporcional+e_anterior;
+            if(e_derivativo>0)
+               e_derivativo=e_derivativo/8;         
+         } 
+           
+         e_integral+=abs(e_proporcional);
+         ei_velocidad+=abs(ep_velocidad);
+         
+         duty_i=((kp1*abs(e_proporcional)+kd1*(e_derivativo)+ki1*(e_integral))+kp2*(ep_velocidad)+ki2*(ei_velocidad)+offset_pwm_i);//*(1+factor_direccion); //lanta izquierda ccp1
+         duty_d=((kp1*abs(e_proporcional)+kd1*(e_derivativo)+ki1*(e_integral))+kp2*(ep_velocidad)+ki2*(ei_velocidad)+offset_pwm_d);//*(1-factor_direccion); //lanta derecha ccp2
+                       
+         e_anterior=e_proporcional;
+
+/*
+   duty_i=duty_i*(1-(factor_i/100)+(factor_d/100));
+   duty_d=duty_d*(1+(factor_i/100)-(factor_d/100));
+*/
+
+
+
+   duty_i=duty_i*(1-(factor_i/100)+(factor_d/100));
+   duty_d=duty_d*(1+(factor_i/100)-(factor_d/100));
+  
+  
+   if(duty_i<=5.)
+      duty_i=5.;
+   if(duty_d<=5.)
+      duty_d=5.;
+            
+
+   if(duty_i>=limite_pwm)
+      duty_i=limite_pwm;
+   if(duty_d>=limite_pwm)   
+      duty_d=limite_pwm;        
+      
+   //A1 son del motor derecho           pin 4  
+   //A4 son del motor izquierdo         pin 9  
+   //A3 son del motor izquierdo         pin 7  
+   //A2 son del motor derecho           pin 8  
+ 
+//   duty_i=duty_i*(1-(factor_i/100));
+//   duty_d=duty_d*(1-(factor_d/100));  
+   
+   duty_i_8=duty_i;
+   duty_d_8=duty_d;
+ 
+   if(abs(a_y)>50)
+   {
+      set_pwm1_duty(0);    //naranja
+      set_pwm2_duty(0);   //morado
+      e_integral=0;
+   }
+   else if(factor_i==0 && factor_d==0)
+   {
+      set_pwm1_duty(0);    //naranja
+      set_pwm2_duty(0);    //morado   
+   }
+   else if((abs(a_y*30))<1)
+   {
+      ang_y=0;
+      a_y=0;
+    //  set_pwm1_duty(0);    //naranja
+    //  set_pwm2_duty(0);    //morado 
+    //  output_toggle(pin_a0);
+    
+   }
+   /*
+   else if(sensor[0]==1)
+   {     
+         output_high(pin_A1);     //a1 va con a4
+         output_high(pin_A2);
+         output_low(pin_A3);
+         output_low(pin_A4);
+         theta_d=0.;
+  //       set_pwm1_duty(50);    //motor derecha
+  //       set_pwm2_duty(50);   //motor izquierda 
+         set_pwm1_duty(duty_d_8/2);    //motor derecha
+         set_pwm2_duty(duty_i_8/2);   //motor izquierda 
+         //output_toggle(pin_a0);
+   } 
+   else if(sensor[6]==1)
+   {
+         output_low(pin_A1);
+         output_(pin_A2);
+         output_low(pin_A3);
+         output_high(pin_A4);
+         theta_d=0.;
+ //        set_pwm1_duty(50);    //motor derecha
+ //        set_pwm2_duty(50);   //motor izquierda 
+         set_pwm1_duty(duty_d_8);    //motor derecha
+         set_pwm2_duty(duty_i_8);   //motor izquierda 
+        // output_toggle(pin_a0);
+   }
+   */
+   else 
+   {
+/*
+   if(contador_avance<=1500)
+   {
+      theta_d=-1.35;
+      output_high(pin_a0);
+   }else if(contador_avance<=1550)
+   {
+       theta_d=0;
+       output_low(pin_a0);
+   }
+   else 
+       contador_avance=0;  
+   contador_avance++;
+*/
+   if(a_y<theta_d)
+   {  
+      output_low(pin_A1);
+      output_low(pin_A3);
+      output_high(pin_A4);  // anti clockwise
+      output_high(pin_A2);  //clockwise
+     
+   }else if(a_y>theta_d)
+   {
+      output_low(pin_A4);
+      output_low(pin_A2);
+      output_high(pin_A1);  //clockwise
+      output_high(pin_A3);  //anti clockwise
+   }
+   
+   
+         set_pwm1_duty(duty_d_8);    //motor derecha
+         set_pwm2_duty(duty_i_8);   //motor izquierda     
+   }  
+     
+   factor_i=0;
+   factor_d=0;
+     
+   sensor_direccion();
+
+   //delay_ms(50);
+   }
+}
+
+void sensor_direccion()
+{   
+      if(input(pin_d3))
+      {
+         sensor[3]=0;
+       //  factor_d=0;
+       //  output_low(pin_b4);
+      }
+      else
+      {
+         sensor[3]=1;
+         factor_d=20;
+        // output_high(pin_b4);
+      }     
+      if(input(pin_d4))
+      {
+         sensor[4]=0;
+        // factor_d=-0.5;
+        // output_low(pin_b3);
+      }
+      else
+      {
+         sensor[4]=1;
+         factor_d=60;
+       //  theta_d=-1.1;
+       //  output_high(pin_b3);
+      }
+      if(input(pin_d5))
+      {
+         sensor[5]=0;
+         
+       //  factor_d=0;
+      //   output_low(pin_b4);
+      }
+      else
+      {
+         sensor[5]=1;
+         factor_d=80;
+       //  theta_d=-0.5;
+      //   output_high(pin_b4);
+      }
+      if(input(pin_d2))      //sensor central
+      {
+         sensor[2]=0;
+      //   theta_d=-1.35;
+      //   factor_i=0;
+      //   factor_d=0;
+      //   output_low(pin_a0);
+      }
+      else
+      {
+         sensor[2]=1;
+      //   factor_i=0;
+       //  factor_d=0;
+       //  output_high(pin_a0);
+      }
+      if(input(pin_d1))
+      {
+         sensor[1]=0;
+      //   factor_i=0;
+       //  output_low(pin_b3);
+      }     
+      else 
+      {
+         sensor[1]=1;
+         factor_i=20;
+       //  theta_d=-1.1;
+      //   output_high(pin_b3);
+      }
+      if(input(pin_d0))
+      {
+         sensor[0]=0;
+      //   factor_i=0;
+      //   output_low(pin_b4);
+      }
+      else
+      {
+         sensor[0]=1;
+         factor_i=60;
+       //  theta_d=-0.8;
+       //  output_high(pin_b4);
+      }
+      if(input(pin_d7))
+      {
+         sensor[7]=0;
+       //  factor_i=0;
+      }
+      else
+      {
+         sensor[7]=1;
+         factor_i=80;
+      //   theta_d=-0.5;
+      }
+    /*  
+      if(contador_avance>=100)
+      {
+         theta_d=theta_d+0.01;
+      }
+    */  
+}
+
+void eeprom()
+{ 
+         signed int32 ar;
+         unsigned int a,b;
+         
+         write_eeprom(0,0);
+         
+         ar=gy_o;
+         if (ar<0)
+            {
+               ar=ar*(-1);
+               write_eeprom(110,50);
+            }
+         a=ar;
+         b=ar>>8;
+         write_eeprom(81,a);  
+         write_eeprom(82,b);
+         
+         
+         ar=ax_o;
+         if (ar<0)
+            {
+               ar=ar*(-1);
+               write_eeprom(2,1);
+            }
+         a=ar;
+         b=ar>>8;
+         write_eeprom(83,a);
+         write_eeprom(84,b);
+         
+         ar=ay_o;
+         if (ar<0)
+            {
+               ar=ar*(-1);
+               write_eeprom(3,1);
+            }
+         a=ar;
+         b=ar>>8;
+         write_eeprom(85,a);
+         write_eeprom(86,b);
+         
+         ar=az_o;
+         if (ar<0)
+            {
+               ar=ar*(-1);
+               write_eeprom(4,1);
+            }
+         a=ar;
+         b=ar>>8;
+         write_eeprom(87,a);
+         write_eeprom(88,b);    
+}
+void reinicio()
+{  
+   set_pwm1_duty(0);    //naranja
+   set_pwm2_duty(0);   //morado
+
+   for(int32 i=0;i<3000;i++)
+      {  
+         G_data[0]=mpu6050_read(0x45); //Read X axis(LSB)
+         G_data[1]=mpu6050_read(0x46); //Read X axis(MSB)
+         A_data[0]=mpu6050_read(0x3B); //Read X axis(LSB)
+         A_data[1]=mpu6050_read(0x3C); //Read X axis(MSB)
+         A_data[2]=mpu6050_read(0x3D); //Read Y axis(LSB)
+         A_data[3]=mpu6050_read(0x3E); //Read Y axis(MSB)
+         A_data[4]=mpu6050_read(0x3F); //Read Z axis(LSB)
+         A_data[5]=mpu6050_read(0x40); //Read Z axis(MSB)
+         gy=make16(G_data[0],G_data[1]);
+         ax=make16(A_data[0],A_data[1]);
+         ay=make16(A_data[2],A_data[3]);
+         az=make16(A_data[4],A_data[5]);
+         gy_o+=gy;
+         ax_o+=ax;
+         ay_o+=ay;
+         az_o+=az;    
+         
+         if(i%100==0)
+            output_toggle(pin_a0);
+      }
+      output_low(pin_a0);
+      gy_o=gy_o/3000;
+      ax_o=ax_o/3000;
+      ay_o=ay_o/3000;
+      az_o=16384-az_o/3000;
+}
