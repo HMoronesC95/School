@@ -1,0 +1,55 @@
+'''
+Created on 26/03/2019
+
+@author: HP
+enviar a: dr.alberto.pastrana@gmail.com
+asunto: Tarea-Otsu
+'''
+
+import numpy as np
+from matplotlib import pyplot as plt
+import cv2
+from cv2.cv2 import sort
+
+img = cv2.imread('lena.png')
+imggray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+cv2.imshow('original',img)
+cv2.imshow('blanco y negro',imggray)
+
+hist = cv2.calcHist([imggray],[0],None,[256],[0,256])
+
+hist_norm = hist.ravel()/np.sum(hist)
+
+g=np.sum(hist)/256
+
+Q_max=0
+
+for i in range(1,255,1):
+    v0=0
+    v1=0
+    vzw=0
+    vin=0
+    g0=(np.sum(hist_norm[0:i]))/i
+    g1=(np.sum(hist_norm[i:255]))/(256-i)
+    
+    for j in range(0,i,1):
+        v0=v0+(g-g0)**2*(hist_norm[j])
+    for j in range(i,255,1):
+        v1=v1+(g-g1)**2*(hist_norm[j])
+        
+    vzw=(np.sum(hist_norm[0:i]))*(g0-g)**2+(np.sum(hist_norm[i:255]))*(g1-g)**2
+    vin=(np.sum(hist_norm[0:i]))*v0+(np.sum(hist_norm[i:255]))*v1
+    Q=(vzw)/(vin)
+    
+    if(Q>Q_max):
+        Q_max=Q
+        umbral=i
+   
+print("Umbral: ",umbral)
+
+a,otsu=cv2.threshold(imggray, umbral, 255, cv2.THRESH_BINARY)
+cv2.imshow("otsu",otsu)
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()

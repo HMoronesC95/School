@@ -1,0 +1,61 @@
+'''
+Created on 07/05/2019
+
+@author: HP
+'''
+import numpy as np
+from matplotlib import pyplot as plt
+import cv2
+from cv2.cv2 import sort
+from math import log2
+from matplotlib.mlab import entropy
+
+img = cv2.imread('angelina.jpg')
+imggray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+
+row,col,dim=img.shape
+
+
+scale=3
+entropia=[]
+en=[]
+coordenada_x=[]
+coordenada_y=[]
+e=0
+
+for fila in range(1,row+1,scale):
+    for columna in range(1,col+1,scale):
+        roi=imggray[(fila-1):(fila+scale),(columna-1):(columna+scale)]
+        hist = cv2.calcHist([roi],[0],None,[256],[0,256])
+        e=0
+        if(np.sum(hist)!=0):
+            hist_norm = hist.ravel()/np.sum(hist)
+            for i in range(0,256):   
+                if hist_norm[i]!=0: 
+                    e=e-hist_norm[i]*log2(hist_norm[i])
+            en.append(e)
+        entropia.append(e)        
+total_valores=len(en)
+#total_valores=len(entropia)
+promedio=np.sum(entropia)/total_valores
+
+contador=0
+
+for fila in range(1,row+1,scale):
+    for columna in range(1,col+1,scale):
+        if entropia[contador]>promedio:
+            cv2.circle(imggray,(columna,fila),1,(0,0,255),1,8,0) 
+            cv2.circle(img,(columna,fila),1,(0,0,255),1,8,0)
+#cv.Circle(img, center, radius, color, thickness=1, lineType=8, shift=0)
+#cv2.circle(img,(447,63), 63, (0,0,255), -1)
+        contador+=1       
+print(entropia)
+print(total_valores)
+#cv2.imshow('img',imggray)
+plt.imshow(imggray,'gray'),plt.title("Imagen grises"),plt.axis([0,600,600,0])
+cv2.imshow('img',img)
+#plt.grid()
+plt.show()
+
+cv2.waitKey(0)

@@ -1,0 +1,36 @@
+'''
+Created on 07/05/2019
+
+@author: HP
+'''
+
+import numpy as np
+from matplotlib import pyplot as plt
+import cv2
+from cv2.cv2 import sort
+from math import log2
+from matplotlib.mlab import entropy
+
+img = cv2.imread('luis.jpg')
+
+row,col,dim=img.shape
+
+if(col>row):
+    row=col
+else:
+    col=row
+y=row
+
+steph=10
+
+for x in range(0,col,steph):
+    cv2.line(img,(x,0),(col,y),(255,0,0),1,8,0)
+    cv2.line(img,(0,x),(y,col),(255,0,0),1,8,0)
+    cv2.line(img,(col,x),(x,col),(255,0,0),1,8,0)
+    cv2.line(img,(0,y),(y,0),(255,0,0),1,8,0)
+    y-=steph
+
+plt.imshow(img,'gray'),plt.title("Imagen grises"),plt.axis([0,col,row,0])
+cv2.imshow('img',img)
+plt.show()
+cv2.waitKey(0)

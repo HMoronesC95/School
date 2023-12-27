@@ -1,0 +1,41 @@
+'''
+Created on 07/05/2019
+
+@author: HP
+'''
+import numpy as np
+from matplotlib import pyplot as plt
+import cv2
+from cv2.cv2 import sort
+from math import log2
+from matplotlib.mlab import entropy
+
+img = cv2.imread('luis.jpg')
+imggray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+row,col,dim=img.shape
+
+
+ancho=int(row/5)
+alto=int(col/5)
+scale=5
+entropia=[]
+e=0
+e_mayor=[]
+interes=[]
+
+for columna in range(1,ancho+1,1):
+    for fila in range(1,alto+1,1):
+        roi=imggray[(fila-1)*5:(fila*5),(columna-1)*5:(columna*5)]
+        hist = cv2.calcHist([roi],[0],None,[256],[0,256])
+        e=0
+        if(np.sum(hist)!=0):
+            hist_norm = hist.ravel()/np.sum(hist)
+            for i in range(0,scale*scale):   
+                if hist_norm[i]>0: 
+                    e=e-hist_norm[i]*log2(hist_norm[i])   
+                    e_mayor.append(e) 
+        entropia.append(e)
+
+print(entropia)
+print(len(entropia))

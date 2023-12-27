@@ -1,0 +1,10 @@
+import random
+a= random.randint(1,99)
+x=0
+while (x!=a):
+    x= int(input("Guess: "))
+    if x<a:
+        print("Guess incorrect, is grater")
+    if x>a:
+        print("Guess incorrect, is lower")
+print("you are correct")
