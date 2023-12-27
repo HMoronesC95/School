@@ -1,0 +1,198 @@
+"------------------------------------PROBLEMA 1------------------------------~
+-----------"
+
+a=0.37
+
+k=2.47
+
+"--------inciso a) calcular ganancias de un controlador PI-----------"
+
+"Con los datos del problema de tiempo de subida y sobrepaso procedemos a enco~
+ntrar los valores de Z, Wd y Wn"
+
+"tr"=0.5
+
+"Mp"=0.2
+
+z=SQRT(LN("Mp")^2/(pi^2+LN("Mp")^2))
+
+"Wd"=1/"tr"*(pi-ATAN(SQRT(1-z^2)/z))
+
+"Wn"="Wd"/SQRT(1-z^2)
+
+"-------------------------------------------------------------"
+
+;Sub(#8)
+z=SQRT(LN(0.2)^2/(pi^2+LN(0.2)^2))
+
+z=0.4559498107
+
+;Sub(#9)
+"Wd"=1/(0.5)*(pi-ATAN(SQRT(1-(0.4559498107)^2)/(0.4559498107)))
+
+"Wd"=4.088470892
+
+;Sub(#10)
+"Wn"=4.088470892/SQRT(1-(0.4559498107)^2)
+
+"Wn"=4.593759188
+
+"Con los valores de z, Wd y Wn calculados procedemos a calcular las ganancias~
+ kp y ki"
+
+"kp"=(2*z*"Wn"-a)/k
+
+"ki"="Wn"^2/k
+
+"-------------------------------------------------------------"
+
+;Sub(#19)
+"kp"=(2*(0.4559498107)*(4.593759188)-0.37)/(2.47)
+
+"kp"=1.546172981
+
+;Sub(#20)
+"ki"=(4.593759188)^2/(2.47)
+
+"ki"=8.543572258
+
+"--------inciso b) ajustar ganancias del controlador PI-----------"
+
+"ki"=1.77
+
+"kp"=0.85
+
+"--------inciso c) resultados de simulacion-----------"
+
+"------------------------------------PROBLEMA 2------------------------------~
+-----------"
+
+a=2.86
+
+k=675.4
+
+"--------inciso a) calcular ganancias de un controlador P con realimentacion ~
+de velocidad-----------"
+
+"Con los datos del problema de tiempo de subida y sobrepaso procedemos a enco~
+ntrar los valores de Z, Wd y Wn"
+
+"tr"=40*10^(-3)
+
+"Mp"=0.15
+
+;Sub(#8)
+z=SQRT(LN(0.15)^2/(pi^2+LN(0.15)^2))
+
+z=0.5169308662
+
+;Sub(#9)
+"Wd"=1/(40*10^(-3))*(pi-ATAN(SQRT(1-(0.5169308662)^2)/(0.5169308662)))
+
+"Wd"=52.85145142
+
+;Sub(#10)
+"Wn"=52.85145142/SQRT(1-(0.5169308662)^2)
+
+"Wn"=61.74039163
+
+"Con los valores de z, Wd y Wn calculados procedemos a calcular las ganancias~
+ kp y kv"
+
+;Sub(#19)
+"kv"=(2*z*"Wn"-a)/k
+
+;Sub(User)
+"kv"=(2*(0.5169308662)*(61.74039163)-2.86)/(675.4)
+
+"kv"=0.09027395358
+
+;Sub(#20)
+"kp"="Wn"^2/k
+
+;Sub(#47)
+"kp"=(61.74039163)^2/(675.4)
+
+"kp"=5.643879121
+
+"--------inciso b) calcular ganancias de un controlador PD para obtener la re~
+spuesta a)-----------"
+
+z=0.5169308662
+
+"Wd"=52.85145142
+
+"Wn"=61.74039163
+
+;Sub(#44)
+"kd"=(2*z*"Wn"-a)/k
+
+;Sub(User)
+"kd"=(2*(0.5169308662)*(61.74039163)-2.86)/(675.4)
+
+"kd"=0.09027395358
+
+;Sub(#47)
+"kp"=(61.74039163)^2/(675.4)
+
+"kp"=5.643879121
+
+"--------inciso c) ajustar las ganancias del controlador PD para obtener la r~
+espuesta deseada-----------"
+
+"--------inciso d) ajustar las ganancias de un controlador PID para obtener l~
+a respuesta a)-----------"
+
+"kd"=(2*z*"Wn"-a)/k
+
+"kd"=0.09027395358
+
+"á"="Wn"^2/("kd"*k)
+
+;Sub(#63)
+"á"=(61.74039163)^2/(0.09027395358*(675.4))
+
+"á"=62.51946322
+
+"kp"=(alpha+beta)*"kd"
+
+"ki"=alpha*beta*"kd"
+
+"-------valores propuestos de à cercanos a cero--------"
+
+alpha=1
+
+;Sub(#66)
+"kp"=(1+62.51946322)*(0.09027395358)
+
+"kp"=5.734153074
+
+;Sub(#67)
+"ki"=1*(62.51946322)*(0.09027395358)
+
+"ki"=5.64387912
+
+"---------------------------"
+
+alpha=0.1
+
+"kp"=(0.1+62.51946322)*(0.09027395358)
+
+"kp"=5.652906515
+
+"ki"=0.1*(62.51946322)*(0.09027395358)
+
+"ki"=0.564387912
+
+"---------------------------"
+
+alpha=0.01
+
+"kp"=(0.01+62.51946322)*(0.09027395358)
+
+"kp"=5.64478186
+
+"ki"=0.01*(62.51946322)*(0.09027395358)
+
+"ki"=0.0564387912
+

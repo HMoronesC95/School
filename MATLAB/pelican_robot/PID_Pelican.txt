@@ -1,0 +1,163 @@
+%
+
+%%% Modelo dinámico / Control PD
+
+clc
+clear all
+
+%datos
+L1=0.26;%m
+LC1=0.0983;%m
+L2=0.26;%m
+LC2=0.0229;%m
+m1=6.5225;%Kg
+m2=2.0458;%Kg
+I1=0.1213;%Kg*m^2
+I2=0.0116;%Kg*m^2
+Gravedad=9.81;%m/s^2
+qd=[pi/10;pi/30;];%rad
+Kp=[30,0;0,30;];%Nm/rad
+Kv=[7,0;0,3;];%Nms/rad
+Ki=[70,0;0,100;];%Nms/rad
+dt=0.001;%s
+lim=10;%s
+
+t=0:dt:lim;
+
+%Inicialización de variables
+q1(:,:,1)=0*(pi/180);
+q2(:,:,1)=0*(pi/180);
+qp1(:,:,1)=0*(pi/180);
+qp2(:,:,1)=0*(pi/180);
+qpp1(:,:,1)=0*(pi/180);
+qpp2(:,:,1)=0*(pi/180);
+
+q(:,:,1)=[q1(:,:,1);q2(:,:,1);];
+qt(:,:,1)=qd-q(:,:,1);
+
+e(:,:,1)=0;
+qp(:,:,1)=[qp1(:,:,1);qp2(:,:,1);];
+
+qpp(:,:,1)=[qpp1(:,:,1);qpp2(:,:,1);];
+
+i=1;
+
+for j=0:dt:lim
+    %Componentes Modelo dinámico
+    M=[(m1*(LC1^2))+(m2*(L1^2))+(m2*2*L1*LC2*cos(q2(:,:,i)))+I1+I2,(m2*(LC2^2))+(m2*L1*LC2*cos(q2(:,:,i)))+I2;(m2*(LC2^2))+(m2*L1*LC2*cos(q2(:,:,i)))+I2,(m2*(LC2^2))+I2;];
+    C=[-m2*L1*LC2*qp2(:,:,i)*sin(q2(:,:,i)),-m2*L1*LC2*sin(q2(:,:,i))*(qp1(:,:,i)+qp2(:,:,i));m2*L1*LC2*sin(q2(:,:,i))*qp1(:,:,i),0;];
+    G=[(m1*LC1*Gravedad*sin(q1(:,:,i)))+(m2*L1*Gravedad*sin(q1(:,:,i)))+(m2*LC2*Gravedad*sin(q1(:,:,i)+q2(:,:,i)));m2*LC2*Gravedad*sin(q1(:,:,i)+q2(:,:,i));];
+    
+    %calculo de parte integral
+    Gd=[(m1*LC1*Gravedad*sin(qd(1,1,1)))+(m2*L1*Gravedad*sin(qd(1,1,1)))+(m2*LC2*Gravedad*sin(qd(1,1,1)+qd(2,1,1)));m2*LC2*Gravedad*sin(qd(1,1,1)+qd(2,1,1));];
+    ep(:,:,1)=qt(:,:,i); 
+    e = e + ep*dt;
+%     e = ep*dt;
+    
+    %Cálculo de la aceleración
+    qpp(:,:,i)=(M^-1)*((Kp*qt(:,:,i))-(Kv*qp(:,:,i))+Ki*e-Ki*Gd+Gd-(C*qp(:,:,i))-(G));
+    
+    %%% Integración de Euler
+    %Velocidades
+    qp1(:,:,i+1)=qp1(:,:,i)+(qpp(1,1,i)*dt);
+    qp2(:,:,i+1)=qp2(:,:,i)+(qpp(2,1,i)*dt);
+    
+    qp(:,:,i+1)=[qp1(:,:,i+1);qp2(:,:,i+1);];
+    %Posiciones
+    q1(:,:,i+1)=q1(:,:,i)+(qp1(:,:,i)*dt);
+    q2(:,:,i+1)=q2(:,:,i)+(qp2(:,:,i)*dt);
+    
+    q(:,:,i+1)=[q1(:,:,i+1);q2(:,:,i+1);];
+    
+    %Cálculo del error
+    qt(:,:,i+1)=qd-q(:,:,i+1);
+    
+    %Almacenar Variables
+    Qq1(i)=q1(:,:,i);
+    Qq2(i)=q2(:,:,i);
+    Qqp1(i)=qp1(:,:,i);
+    Qqp2(i)=qp2(:,:,i);
+    Qqpp1(i)=qpp(1,1,i);
+    Qqpp2(i)=qpp(2,1,i);
+    qt1(i)=qt(1,1,i);
+    qt2(i)=qt(2,1,i);
+    
+    i=i+1;
+end
+
+figure(1)
+%plot(t,Qq1);
+%figure(2)
+%plot(t,Qq2);
+plot(t,Qq1,t,Qq2);
+title('Posiciones variables articulares')
+xlabel('t[s]') 
+ylabel('[rad]') 
+% xlim([0 400]);
+% ylim([-100 400]);
+legend({'q1','q2'})
+%axis([0 360 -150 150])
+grid on
+figure(3)
+%plot(t,Qqp1);
+%figure(4)
+%plot(t,Qqp2);
+plot(t,Qqp1,t,Qqp2);
+title('Velocidades variables articulares')
+xlabel('t[s]') 
+ylabel('[rad/s]') 
+legend({'qp1','qp2'})
+%axis([0 360 -150 150])
+grid on
+figure(5)
+%plot(t,qt1);
+%figure(6)
+%plot(t,qt2);
+plot(t,qt1,t,qt2);
+title('Error Posiciones variables articulares')
+xlabel('t[s]') 
+ylabel('[rad]') 
+legend({'qt1','qt2'})
+%axis([0 360 -150 150])
+grid on
+
+figure(7)
+p=0;
+%DATOS para Gráfica de Trayectoria Calculada
+Cpx=L1*cos(Qq1)+L2*cos(Qq1+Qq2);
+Cpy=L1*sin(Qq1)+L2*sin(Qq1+Qq2);
+
+plot(Cpx,Cpy,'k');
+title('Simulación Movimiento')
+xlabel('[px]') 
+ylabel('[py]') 
+grid on
+
+qd(1,1,1)
+
+%Gráfica Calculada
+%
+for k=1:20:i
+p=p+1;
+viscircles([Cpx(k),Cpy(k)],0.0025);
+%Eslabones del robot
+Eslabon1=line([0 L1*cos(Qq1(k))],[0 L1*sin(Qq1(k))],'Color','blue');
+Eslabon2=line([L1*cos(Qq1(k)) Cpx(k)],[L1*sin(Qq1(k)) Cpy(k)],'Color','red');
+pause(0.001);
+drawnow
+F(p)=getframe(gcf);
+
+%Borrar barras anteriores
+if k~=i-1
+delete(Eslabon1);
+delete(Eslabon2);
+end
+end
+
+%Guardar Video
+video=VideoWriter('Video_Simulacion.avi','Motion JPEG AVI');
+video.FrameRate=60;
+open(video)
+writeVideo(video,F);
+close(video)
+%}

@@ -1,0 +1,17 @@
+archivo Control_brazo_robot
+
+opening fcn
+global world fig
+
+close(world);
+
+world=vrworld('nombre_archivo.wrl','new');
+open(world);
+fig=vrfigure(world);
+
+set(fig,'Viewpoint','Superior');
+set(fig,'Viewpoint','Atras');
+set(fig,'Viewpoint','Frente');
+set(fig,'Name','BRAZO ROBÓTICO ')
+set(fig,'ZoomFactor',0.8);
+set(fig,'NavMode','Examine');
