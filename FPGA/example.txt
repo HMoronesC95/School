@@ -1,0 +1,30 @@
+--
+-- VHDL Entity my_project_lib.ejemplo_1.arch_name
+--
+-- Created:
+--          by - HP.UNKNOWN (LAPTOP-VBR26E3B)
+--          at - 08:37:21 18/06/2019
+--
+-- using Mentor Graphics HDL Designer(TM) 2012.1 (Build 6)
+--
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_arith.all;
+USE ieee.std_logic_unsigned.all;
+
+entity test is                    --la entity es el dispositivo
+    port(
+      a : in std_logic;
+      b : in std_logic;
+      c : in std_logic;
+      x : in std_logic_vector(2 downto 0);
+      f1 : out std_logic                      --la ultima declaracion de la entity no lleva punto y coma
+    );
+end test;
+
+architecture simple of test is      
+begin
+
+    f1 <= a or(b and c);                                   --f1 <= significa que f1 toma el valor de (derecha)
+
+end architecture simple;

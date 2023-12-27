@@ -1,0 +1,50 @@
+--
+-- VHDL Entity SCRATCH_LIB.multiplexor.arch_name
+--
+-- Created:
+--          by - HP.UNKNOWN (LAPTOP-VBR26E3B)
+--          at - 08:36:50 19/06/2019
+--
+-- using Mentor Graphics HDL Designer(TM) 2012.1 (Build 6)
+--
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_arith.all;
+USE ieee.std_logic_unsigned.all;
+
+ENTITY multiplexor IS
+    port(
+    x : in std_logic_vector(3 downto 0);   --entrada de push
+    s : in std_logic_vector(1 downto 0);   --entrada de selector
+    f1 : out std_logic                     --salida led 
+    );
+     
+END ENTITY multiplexor;
+
+architecture combinacional of multiplexor is    --declaracion de arquitectura
+signal func1, func2, func3 : std_logic;         --estas señales se pueden leer y escribir, no es ni input u output
+--signal func : std_logic_vector(2 downto 0) : ="000" --se inicializa el vector en cero
+begin                                           --dentro del begin es la descripcion de lo que se va a ejecutar
+    
+    func1 <= x(3) and x(2);
+    func2 <=((not x(1)) and x(0)) or (x(1) and (not x(0)));
+    func3 <= x(0);
+  
+    --f1 <= (func(0) and (not s(1)) and (not s(0))) or (func(1) and....--funcion del multiplexor
+  
+    comparacion : process (s, func1, func2, func3)
+    begin
+        case s is
+            when "00" => f1 <= func1;      --cuando es un vector se pregunta con comillas dobles porque tiene varios valores
+              
+            when "01" => f1 <= func2;
+                 
+            when "10" => f1 <= func3;
+              
+            when others => f1 <= '0';       --las comillas simples es cuando es uno o cero
+        end case;
+    
+    end process comparacion;
+  
+  
+end architecture combinacional;
